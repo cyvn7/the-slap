@@ -26,7 +26,7 @@ const createTable = async () => {
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    age INTEGER NOT NULL
+    password TEXT NOT NULL
   )`);
 };
 
@@ -50,12 +50,35 @@ app.get('/api/all', async (req, res) => {
 });
 
 // POST method to insert a user
-app.post('/api/form', async (req, res) => {
+app.post('/api/register', async (req, res) => {
   try {
-    const { name, email, age } = req.body;
+    const { name, email, password } = req.body;
     const db = await dbPromise;
-    await db.run(`INSERT INTO users (name, email, age) VALUES (?, ?, ?)`, [name, email, age]);
+    await db.run(`INSERT INTO users (name, email, password) VALUES (?, ?, ?)`, [name, email, password]);
     res.status(200).send(req.body);
+  } catch (error) {
+    if (error.code === 'SQLITE_CONSTRAINT') {
+      if (error.message.includes('users.name')) {
+        res.status(400).send('Nazwa użytkownika jest już zajęta');
+      } else if (error.message.includes('users.email')) {
+        res.status(400).send('Email jest już zajęty');
+      } else {
+        res.status(400).send('Błąd unikalności');
+      }
+    } else {
+      res.status(500).send('Error');
+    }
+    console.log(error);
+  }
+});
+
+// DELETE method to delete a user
+app.delete('/api/user/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await dbPromise;
+    await db.run(`DELETE FROM users WHERE id = ?`, id);
+    res.status(200).send(`User with ID ${id} deleted`);
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);
