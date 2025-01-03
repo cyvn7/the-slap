@@ -21,7 +21,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: true, // Ensure cookies are only sent over HTTPS
+    // secure: true, // Ensure cookies are only sent over HTTPS
     httpOnly: true, // Prevent client-side scripts from accessing the cookies
     maxAge: 3600000, // Set a reasonable expiration time for sessions
     sameSite: 'strict' // Prevent CSRF attacks
@@ -96,11 +96,12 @@ app.post('/api/register', async (req, res) => {
 });
 
 // POST method to login a user
+// POST method to login a user
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const db = await dbPromise;
-    const user = await db.get(`SELECT id, password FROM users WHERE email = ?`, email);
+    const user = await db.get(`SELECT id, name, password FROM users WHERE email = ?`, email);
 
     if (!user) {
       return res.status(400).send('Invalid email or password');
@@ -112,20 +113,36 @@ app.post('/api/login', async (req, res) => {
     }
 
     req.session.userId = user.id;
+    req.session.userName = user.name;
     res.status(200).send('Login successful');
-    app.get('/check-session', (req, res) => {
-      if (req.session) {
-        res.json({
-          sessionStarted: true,
-          sessionId: req.session.id,
-          sessionProperties: req.session
-        });
-      } else {
-        res.json({
-          sessionStarted: false
-        });
-      }
+  } catch (error) {
+    res.status(500).send('Error');
+    console.log(error);
+  }
+});
+
+// GET method to check session
+app.get('/check-session', (req, res) => {
+  if (req.session) {
+    res.json({
+      sessionStarted: true,
+      sessionId: req.session.id,
+      sessionProperties: req.session
     });
+  } else {
+    res.json({
+      sessionStarted: false
+    });
+  }
+});
+
+// DELETE method to delete a user
+app.delete('/api/user/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await dbPromise;
+    await db.run(`DELETE FROM users WHERE id = ?`, id);
+    res.status(200).send('User deleted');
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);
@@ -144,5 +161,29 @@ app.delete('/api/user/:id', async (req, res) => {
     console.log(error);
   }
 });
+
+app.get('/api/session', (req, res) => {
+  if (req.session.userId) {
+    res.json({
+      loggedIn: true,
+      userName: req.session.userName
+    });
+  } else {
+    res.json({
+      loggedIn: false
+    });
+  }
+});
+
+
+app.post('/api/logout', (req, res) => {
+  req.session.destroy(err => {
+    if (err) {
+      return res.status(500).send('Error logging out');
+    }
+    res.status(200).send('Logout successful');
+  });
+});
+
 
 app.listen(3000, () => console.log(`App running on port 3000.`));

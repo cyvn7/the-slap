@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,7 +10,9 @@ const Login = () => {
     e.preventDefault();
     try {
       const res = await axios.post('http://localhost:8000/api/login', { email, password }, { withCredentials: true });
-      alert(res.data);
+      if (res.status === 200) {
+        window.location.href = '/';
+      }
     } catch (error) {
       if (error.response && error.response.status === 400) {
         alert(error.response.data);
@@ -45,6 +48,7 @@ const Login = () => {
           />
         </div>
         <button type="submit">Login</button>
+        <Link to="/register">Nie masz konta? Zarejestruj się!</Link>
       </form>
     </div>
   );

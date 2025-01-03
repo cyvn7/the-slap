@@ -5,6 +5,7 @@ import Home from "./components/Home";
 import GetAllUser from "./components/GetAllUser";
 import Register from "./components/Register";
 import Login from "./components/Login";
+import Profile from "./components/Profile";
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Route path="get" element={<GetAllUser />} />
         <Route path="register" element={<Register />} />
         <Route path="login" element={<Login />} />
+        <Route path="profile" element={<Profile />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,7 +1,21 @@
+import React, { useEffect, useState } from 'react';
 import { Outlet, Link } from "react-router-dom";
+import axios from 'axios';
 import logo from '../assets/logo.png'; // Ścieżka do logo
 
 const Layout = () => {
+  const [session, setSession] = useState({ loggedIn: false, userName: '' });
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
+      setSession(response.data);
+    };
+
+    fetchSession();
+  }, []);
+
+
   return (
     <>
       <header>
@@ -10,23 +24,30 @@ const Layout = () => {
             <img src={logo} alt="Logo" style={styles.logo} />
           </button>
         </Link>
+        {session.loggedIn ? (
+          <div>
+            <span>Witaj, {session.userName}</span>
+          </div>
+        ) : (
+          <span>Nie jesteś zalogowany</span>
+        )}
       </header>
       <nav>
         <ul>
           <li>
             <Link to="/">Home</Link>
           </li>
-          <li>
-            <Link to="/post">Post User</Link>
-          </li>
-          <li>
-            <Link to="/get">Get All User</Link>
-          </li>
+          {session.loggedIn ? (
+            <li>
+              <Link to="/profile">Profile</Link>
+            </li>
+          ) : (
+            <li>
+              <Link to="/login">Login</Link>
+            </li>
+          )}
           <li>
             <Link to="/register">Register</Link>
-          </li>
-          <li>
-            <Link to="/login">Login</Link>
           </li>
         </ul>
       </nav>
