@@ -43,6 +43,27 @@ const NewPost = () => {
     document.execCommand('underline');
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post('http://localhost:8000/api/newpost', {
+        body: content,
+        mood: mood,
+        emoji: emoji
+      }, { withCredentials: true });
+
+      if (response.status === 200) {
+        alert('Post created successfully');
+        setContent('');
+        setMood('');
+        setEmoji('');
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      alert('Error creating postt ' + error);
+    }
+  };
+
   return (
     <div className="new-post-container">
       <div className="profile-section">
@@ -88,7 +109,7 @@ const NewPost = () => {
           </div>
         )}
       </div>
-      <button className="submit-button">Post</button>
+      <button className="submit-button" onClick={handleSubmit}>Post</button>
     </div>
   );
 };

@@ -1,4 +1,3 @@
-// filepath: /Users/cyan/Library/Mobile Documents/com~apple~CloudDocs/pw/ochrona danych/the-slap/node/index.js
 import express from 'express';
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
@@ -42,11 +41,22 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
+  //await db.exec(`DROP TABLE IF EXISTS posts`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL
+  )`);
+
+  await db.exec(`CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    postedid INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    mood TEXT NOT NULL,
+    emoji TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (postedid) REFERENCES users(id)
   )`);
 };
 
@@ -96,7 +106,6 @@ app.post('/api/register', async (req, res) => {
 });
 
 // POST method to login a user
-// POST method to login a user
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -123,32 +132,38 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// GET method to check session
-app.get('/check-session', (req, res) => {
-  if (req.session) {
-    res.json({
-      sessionStarted: true,
-      sessionId: req.session.id,
-      sessionProperties: req.session
-      
-    });
-  } else {
-    res.json({
-      sessionStarted: false
-    });
-  }
-});
-
-// DELETE method to delete a user
-app.delete('/api/user/:id', async (req, res) => {
+// POST method to add a new post
+app.post('/api/newpost', async (req, res) => {
   try {
-    const { id } = req.params;
+    const { body, mood, emoji } = req.body;
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).send('Unauthorized');
+    }
+
     const db = await dbPromise;
-    await db.run(`DELETE FROM users WHERE id = ?`, id);
-    res.status(200).send('User deleted');
+    await db.run(`INSERT INTO posts (postedid, body, mood, emoji) VALUES (?, ?, ?, ?)`, [userId, body, mood, emoji]);
+    res.status(200).send('Post created successfully');
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);
+  }
+});
+
+// GET method to check session
+app.get('/api/session', (req, res) => {
+  if (req.session.userId) {
+    res.json({
+      loggedIn: true,
+      userName: req.session.userName,
+      userIp: req.session.userIp,  // Include the user's IP address in the response
+      userAgent: req.session.userAgent 
+    });
+  } else {
+    res.json({
+      loggedIn: false
+    });
   }
 });
 
@@ -165,22 +180,6 @@ app.delete('/api/user/:id', async (req, res) => {
   }
 });
 
-app.get('/api/session', (req, res) => {
-  if (req.session.userId) {
-    res.json({
-      loggedIn: true,
-      userName: req.session.userName,
-      userIp: req.session.userIp,  // Include the user's IP address in the response
-      userAgent: req.session.userAgent 
-    });
-  } else {
-    res.json({
-      loggedIn: false
-    });
-  }
-});
-
-
 app.post('/api/logout', (req, res) => {
   req.session.destroy(err => {
     if (err) {
@@ -190,5 +189,21 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
+// GET method to get all posts
+app.get('/api/posts', async (req, res) => {
+  try {
+    const db = await dbPromise;
+    const posts = await db.all(`
+      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.timestamp, users.name as userName
+      FROM posts
+      JOIN users ON posts.postedid = users.id
+      ORDER BY posts.timestamp DESC
+    `);
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).send('Error');
+    console.log(error);
+  }
+});
 
 app.listen(3000, () => console.log(`App running on port 3000.`));

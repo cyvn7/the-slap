@@ -1,0 +1,21 @@
+.posts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-top: 20px;
+  }
+  
+  .post {
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
+  
+  .post h3 {
+    margin: 0 0 10px;
+  }
+  
+  .post p {
+    margin: 5px 0;
+  }
