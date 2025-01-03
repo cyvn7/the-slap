@@ -114,6 +114,8 @@ app.post('/api/login', async (req, res) => {
 
     req.session.userId = user.id;
     req.session.userName = user.name;
+    req.session.userIp = req.ip; // Store the user's IP address in the session
+    req.session.userAgent = req.headers['user-agent'];
     res.status(200).send('Login successful');
   } catch (error) {
     res.status(500).send('Error');
@@ -128,6 +130,7 @@ app.get('/check-session', (req, res) => {
       sessionStarted: true,
       sessionId: req.session.id,
       sessionProperties: req.session
+      
     });
   } else {
     res.json({
@@ -166,7 +169,9 @@ app.get('/api/session', (req, res) => {
   if (req.session.userId) {
     res.json({
       loggedIn: true,
-      userName: req.session.userName
+      userName: req.session.userName,
+      userIp: req.session.userIp,  // Include the user's IP address in the response
+      userAgent: req.session.userAgent 
     });
   } else {
     res.json({

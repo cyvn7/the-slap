@@ -1,0 +1,92 @@
+.new-post-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+  }
+  
+  .editor-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .text-editor {
+    width: 500px;
+    height: 150px;        /* fixed height */
+    overflow-y: auto;     /* scroll instead of resizing */
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 4px;
+    background-color: #fff;
+  }
+  
+  .mood-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .submit-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  .submit-button:hover {
+    background-color: #0056b3;
+  }
+
+  .emoji-picker-container {
+    position: relative;
+  }
+  
+  .emoji-picker {
+    position: absolute;
+    top: 300px; /* Adjust this value as needed to position the picker above the form */
+    z-index: 1000;
+  }
+  
+  .mood-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .mood-container label {
+    font-weight: bold;
+  }
+  
+  .mood-input-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .mood-container input {
+    text-transform: uppercase;
+    color: purple;
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  .profile-picture {
+    width: 80px;
+    height: 100px;
+    margin-right: 10px;
+  }
+  
+  .profile-name {
+    font-size: 1.2rem;
+    font-weight: bold;
+  }
+  .mood-container label {
+    font-weight: bold;
+    color: red;
+  }

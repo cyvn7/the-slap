@@ -2,36 +2,34 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 
 const Profile = () => {
-  const [user, setUser] = useState({});
+  const [session, setSession] = useState({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchSession = async () => {
       const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
-      if (response.data.loggedIn) {
-        setUser({ name: response.data.userName });
-      }
+      setSession(response.data);
     };
 
-    fetchUser();
+    fetchSession();
   }, []);
 
   const handleLogout = async () => {
     await axios.post('http://localhost:8000/api/logout', {}, { withCredentials: true });
-    setUser({});
+    setSession({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
     window.location.href = '/login';
   };
+
+  if (!session.loggedIn) {
+    return <p>Nie jesteś zalogowany</p>;
+  }
 
   return (
     <div className="profile-container">
       <h2>Profile</h2>
-      {user.name ? (
-        <div>
-          <p>Name: {user.name}</p>
-          <button onClick={handleLogout}>Wyloguj się</button>
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
+      <p>Name: {session.userName}</p>
+      <p>IP Address: {session.userIp}</p>
+      <p>Browser: {session.userAgent}</p>
+      <button onClick={handleLogout}>Wyloguj się</button>
     </div>
   );
 };

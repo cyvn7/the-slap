@@ -38,17 +38,22 @@ const Layout = () => {
             <Link to="/">Home</Link>
           </li>
           {session.loggedIn ? (
-            <li>
-              <Link to="/profile">Profile</Link>
-            </li>
+            <React.Fragment>
+              <li>
+                <Link to="/profile">Profile</Link>
+              </li>
+              <li>
+                <Link to="/newpost">New Post</Link>
+              </li>
+            </React.Fragment>
           ) : (
             <li>
               <Link to="/login">Login</Link>
             </li>
           )}
-          <li>
+          {/* <li>
             <Link to="/register">Register</Link>
-          </li>
+          </li> */}
         </ul>
       </nav>
       <Outlet />
