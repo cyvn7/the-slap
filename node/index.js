@@ -6,7 +6,9 @@ import path from 'path';
 import bcrypt from 'bcrypt';
 import session from 'express-session';
 import SQLiteStore from 'connect-sqlite3';
-
+import * as OTPAuth from "otpauth";
+import * as base32 from "hi-base32";
+import QRCode from "qrcode";
 const app = express();
 const SQLiteStoreSession = SQLiteStore(session);
 
@@ -41,12 +43,13 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  //await db.exec(`DROP TABLE IF EXISTS posts`);
+  // await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    secret TEXT
   )`);
 
   await db.exec(`CREATE TABLE IF NOT EXISTS posts (
@@ -86,8 +89,33 @@ app.post('/api/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10); // Generate salt with 10 rounds
     const hashedPassword = await bcrypt.hash(password, salt); // Hash the password with the salt
 
+      // Generate 2FA secret
+    // Generate 2FA secret
+    const secret = new OTPAuth.Secret();
+    const secretBase32 = secret.base32;
+    
+    // Create TOTP instance for QR code
+    const totp = new OTPAuth.TOTP({
+      issuer: "the-slap.com",
+      label: email, // Use email as label for better identification
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: secretBase32
+    });
+
+    // Generate QR code URL
+    const otpauth_url = totp.toString();
+    console.log('Registration secret:', secretBase32);
+    console.log('OTP URL:', otpauth_url);
+
+    // Generate and send the QR code as a response
+    QRCode.toDataURL(otpauth_url, (err) => {
+      console.log(otpauth_url)
+      })
+
     const db = await dbPromise;
-    await db.run(`INSERT INTO users (name, email, password) VALUES (?, ?, ?)`, [name, email, hashedPassword]);
+    await db.run(`INSERT INTO users (name, email, password, secret) VALUES (?, ?, ?, ?)`, [name, email, hashedPassword, secretBase32]);
     res.status(200).send(req.body);
   } catch (error) {
     if (error.code === 'SQLITE_CONSTRAINT') {
@@ -108,9 +136,9 @@ app.post('/api/register', async (req, res) => {
 // POST method to login a user
 app.post('/api/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, token } = req.body;
     const db = await dbPromise;
-    const user = await db.get(`SELECT id, name, password FROM users WHERE email = ?`, email);
+    const user = await db.get(`SELECT id, name, password, secret FROM users WHERE email = ?`, email);
 
     if (!user) {
       return res.status(400).send('Invalid email or password');
@@ -119,6 +147,31 @@ app.post('/api/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(400).send('Invalid email or password');
+    }
+
+    console.log('Stored secret:', user.secret); // Log stored secret
+
+    // Create TOTP instance for validation
+    const totp = new OTPAuth.TOTP({
+      issuer: "the-slap.com",
+      label: email,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.secret)
+    });
+
+
+    // Validate token with window of 1 to allow for time drift
+    const delta = totp.validate({
+      token,
+      window: 1
+    });
+
+    console.log('Token validation result:', delta); // Log validation result
+
+    if (delta === null) {
+      return res.status(401).send('Invalid 2FA token');
     }
 
     req.session.userId = user.id;
@@ -240,5 +293,51 @@ app.delete('/api/posts/:id', async (req, res) => {
     console.log(error);
   }
 });
+
+// Endpoint to verify the two-way authentication code
+app.post('/verify-2fa', async (req, res) => {
+  try {
+    const { username, token } = req.body;
+    const db = await dbPromise;
+    // Find user by name in DB
+    const user = await db.get(`SELECT id, secret FROM users WHERE name = ?`, username);
+    if (!user) {
+      return res.status(404).send('User not found');
+    }
+
+    const base32_secret = generateBase32Secret();
+    user.secret = base32_secret;
+    
+    let totp = new OTPAuth.TOTP({
+      issuer: "the-slap.com",
+      label: "The Slap",
+      algorithm: "SHA1",
+      digits: 6,
+      secret: base32_secret,
+    });
+
+    let delta = totp.validate({ token });
+    if (delta !== null) {
+      return res.json({
+        status: "success",
+        message: "Authentication successful"
+      });
+    } else {
+      return res.status(401).json({
+        status: "fail",
+        message: "Authentication failed"
+      });
+    }
+  } catch (error) {
+    res.status(500).send('Error');
+    console.log(error);
+  }
+});
+
+const generateBase32Secret = () => {
+  const buffer = crypto.randomBytes(15);
+  const base32 = encode(buffer).replace(/=/g, "").substring(0, 24);
+  return base32;
+};
 
 app.listen(3000, () => console.log(`App running on port 3000.`));

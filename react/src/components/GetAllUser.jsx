@@ -38,6 +38,7 @@ const GetAllUser = () => {
             name: {user.name} <br />
             email: {user.email} <br />
             password: {user.password} <br />
+            secret: {user.secret} <br />
             <button onClick={() => deleteUser(user.id)}>Delete</button>
           </li>
         ))}

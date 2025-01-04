@@ -16,7 +16,10 @@
     "connect-sqlite3": "^0.9.15",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
+    "hi-base32": "^0.5.1",
     "nodemon": "^3.1.9",
+    "otpauth": "^9.3.6",
+    "qrcode": "^1.5.4",
     "react-router-dom": "^7.1.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
