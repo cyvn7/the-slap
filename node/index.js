@@ -142,6 +142,12 @@ app.post('/api/newpost', async (req, res) => {
       return res.status(401).send('Unauthorized');
     }
 
+    // Validate allowed characters (including Unicode letters and numbers)
+    const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-]+$/u;
+    if (!allowedChars.test(body) || !allowedChars.test(mood)) {
+      return res.status(400).send('Invalid characters in post content or mood.');
+    }
+
     const db = await dbPromise;
     await db.run(`INSERT INTO posts (postedid, body, mood, emoji) VALUES (?, ?, ?, ?)`, [userId, body, mood, emoji]);
     res.status(200).send('Post created successfully');
@@ -200,6 +206,35 @@ app.get('/api/posts', async (req, res) => {
       ORDER BY posts.timestamp DESC
     `);
     res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).send('Error');
+    console.log(error);
+  }
+});
+
+// DELETE method to delete a post
+app.delete('/api/posts/:id', async (req, res) => {
+  try {
+    const postId = req.params.id;
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).send('Unauthorized');
+    }
+
+    const db = await dbPromise;
+    const post = await db.get(`SELECT postedid FROM posts WHERE id = ?`, postId);
+
+    if (!post) {
+      return res.status(404).send('Post not found');
+    }
+
+    if (post.postedid !== userId) {
+      return res.status(403).send('Forbidden');
+    }
+
+    await db.run(`DELETE FROM posts WHERE id = ?`, postId);
+    res.status(200).send('Post deleted successfully');
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);

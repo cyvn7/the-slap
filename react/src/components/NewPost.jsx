@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import axios from 'axios';
-import './NewPost.css';
+import './styles/NewPost.css';
 
 const NewPost = () => {
   const [content, setContent] = useState('');
@@ -45,6 +45,10 @@ const NewPost = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!content || !mood || !emoji) {
+      alert('All fields are required.');
+      return;
+    }
     try {
       const response = await axios.post('http://localhost:8000/api/newpost', {
         body: content,
@@ -60,7 +64,7 @@ const NewPost = () => {
       }
     } catch (error) {
       console.error('Error creating post:', error);
-      alert('Error creating postt ' + error);
+      alert('Error creating post ' + error);
     }
   };
 

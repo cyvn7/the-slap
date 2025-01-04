@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import './Home.css';
+import './styles/Home.css';
 
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     const fetchSession = async () => {
       try {
         const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
         setIsLoggedIn(response.data.loggedIn);
+        setUserName(response.data.userName);
         if (response.data.loggedIn) {
           fetchPosts();
         }
@@ -31,6 +33,17 @@ const Home = () => {
     fetchSession();
   }, []);
 
+  const handleDelete = async (postId) => {
+    try {
+      const response = await axios.delete(`http://localhost:8000/api/posts/${postId}`, { withCredentials: true });
+      if (response.status === 200) {
+        setPosts(posts.filter(post => post.id !== postId));
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
+  };
+
   return (
     <div>
       {isLoggedIn ? (
@@ -41,8 +54,11 @@ const Home = () => {
               <div key={post.id} className="post">
                 <h3>{post.userName}</h3>
                 <p>{post.body}</p>
-                <p>Mood: {post.mood} {post.emoji}</p>
+                <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple' }}>{post.mood}</span> {post.emoji}</p>
                 <p>{new Date(post.timestamp).toLocaleString()}</p>
+                {post.userName === userName && (
+                  <button onClick={() => handleDelete(post.id)}>Delete</button>
+                )}
               </div>
             ))}
           </div>
