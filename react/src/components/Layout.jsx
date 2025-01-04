@@ -43,6 +43,9 @@ const Layout = () => {
                 <Link to="/profile">Profile</Link>
               </li>
               <li>
+                <Link to="/settings">Settings</Link>
+              </li>
+              <li>
                 <Link to="/newpost">New Post</Link>
               </li>
             </React.Fragment>

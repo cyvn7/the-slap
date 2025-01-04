@@ -48,13 +48,13 @@ const Home = () => {
     <div>
       {isLoggedIn ? (
         <div>
-          <h1>You are logged in</h1>
+          <h1>Posts</h1>
           <div className="posts-container">
             {posts.map(post => (
               <div key={post.id} className="post">
                 <h3>{post.userName}</h3>
                 <p>{post.body}</p>
-                <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple' }}>{post.mood}</span> {post.emoji}</p>
+                <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple', fontWeight: 'bold' }}>{post.mood}</span> {post.emoji}</p>
                 <p>{new Date(post.timestamp).toLocaleString()}</p>
                 {post.userName === userName && (
                   <button onClick={() => handleDelete(post.id)}>Delete</button>

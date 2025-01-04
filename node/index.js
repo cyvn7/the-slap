@@ -190,6 +190,7 @@ app.post('/api/newpost', async (req, res) => {
   try {
     const { body, mood, emoji } = req.body;
     const userId = req.session.userId;
+    console.log('User ID:', userId);
 
     if (!userId) {
       return res.status(401).send('Unauthorized');
@@ -216,6 +217,7 @@ app.get('/api/session', (req, res) => {
     res.json({
       loggedIn: true,
       userName: req.session.userName,
+      userId: req.session.userId,
       userIp: req.session.userIp,  // Include the user's IP address in the response
       userAgent: req.session.userAgent 
     });
@@ -383,5 +385,28 @@ const generateBase32Secret = () => {
   const base32 = encode(buffer).replace(/=/g, "").substring(0, 24);
   return base32;
 };
+
+app.get('/api/user/posts', async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).send('Unauthorized');
+    }
+
+    const db = await dbPromise;
+    const posts = await db.all(`
+      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.timestamp
+      FROM posts
+      WHERE posts.postedid = ?
+      ORDER BY posts.timestamp DESC
+    `, userId);
+
+    res.status(200).json(posts);
+  } catch (error) {
+    res.status(500).send('Error fetching user posts');
+    console.log(error);
+  }
+});
 
 app.listen(3000, () => console.log(`App running on port 3000.`));

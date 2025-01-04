@@ -3,11 +3,25 @@ import axios from 'axios';
 
 const Profile = () => {
   const [session, setSession] = useState({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
+  const [posts, setPosts] = useState([]);
 
   useEffect(() => {
     const fetchSession = async () => {
       const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
       setSession(response.data);
+
+      if (response.data.loggedIn) {
+        fetchUserPosts();
+      }
+    };
+
+    const fetchUserPosts = async () => {
+      try {
+        const response = await axios.get('http://localhost:8000/api/user/posts', { withCredentials: true });
+        setPosts(response.data);
+      } catch (error) {
+        console.error('Error fetching user posts:', error);
+      }
     };
 
     fetchSession();
@@ -25,12 +39,17 @@ const Profile = () => {
 
   return (
     <div className="profile-container">
-      <h2>Profile</h2>
-      <p>Name: {session.userName}</p>
-      <p>IP Address: {session.userIp}</p>
-      <p>Browser: {session.userAgent}</p>
-      <button onClick={handleLogout}>Wyloguj się</button>
-      <button onClick={() => window.location.href = '/reset'}>Zmień hasło</button>
+      <h3>Your Posts</h3>
+      <div className="posts-container">
+        {posts.map(post => (
+              <div key={post.id} className="post">
+              <p>{post.body}</p>
+              <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple', fontWeight: 'bold' }}>{post.mood}</span> {post.emoji}</p>
+              <p>{new Date(post.timestamp).toLocaleString()}</p>
+              <button onClick={() => handleDelete(post.id)}>Delete</button>
+            </div>
+        ))}
+      </div>
     </div>
   );
 };
