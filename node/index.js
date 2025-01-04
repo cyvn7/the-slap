@@ -334,6 +334,50 @@ app.post('/verify-2fa', async (req, res) => {
   }
 });
 
+app.post('/api/reset-password', async (req, res) => {
+  try {
+    const { oldPassword, newPassword, twoFactorCode } = req.body;
+    const userId = req.session.userId;
+
+    if (!userId) {
+      return res.status(401).send('Unauthorized');
+    }
+
+    const db = await dbPromise;
+    const user = await db.get(`SELECT password, secret FROM users WHERE id = ?`, userId);
+
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(400).send('Invalid old password');
+    }
+
+    // Verify the 2FA token
+    const totp = new OTPAuth.TOTP({
+      issuer: "the-slap.com",
+      label: "The Slap",
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(user.secret)
+    });
+
+    const delta = totp.validate({ token: twoFactorCode });
+    if (delta === null) {
+      return res.status(401).send('Invalid 2FA token');
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedNewPassword = await bcrypt.hash(newPassword, salt);
+
+    await db.run(`UPDATE users SET password = ? WHERE id = ?`, [hashedNewPassword, userId]);
+
+    res.status(200).send('Password reset successful');
+  } catch (error) {
+    console.error('Error resetting password:', error);
+    res.status(500).send('Error resetting password');
+  }
+});
+
 const generateBase32Secret = () => {
   const buffer = crypto.randomBytes(15);
   const base32 = encode(buffer).replace(/=/g, "").substring(0, 24);

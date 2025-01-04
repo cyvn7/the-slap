@@ -30,6 +30,7 @@ const Profile = () => {
       <p>IP Address: {session.userIp}</p>
       <p>Browser: {session.userAgent}</p>
       <button onClick={handleLogout}>Wyloguj się</button>
+      <button onClick={() => window.location.href = '/reset'}>Zmień hasło</button>
     </div>
   );
 };

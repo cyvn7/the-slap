@@ -7,7 +7,7 @@ import Register from "./components/Register";
 import Login from "./components/Login";
 import Profile from "./components/Profile";
 import NewPost from "./components/NewPost";
-
+import ResetPass from "./components/ResetPass";
 
 export default function App() {
   return (
@@ -20,6 +20,7 @@ export default function App() {
         <Route path="login" element={<Login />} />
         <Route path="profile" element={<Profile />} />
         <Route path="newpost" element={<NewPost />} />
+        <Route path="reset" element={<ResetPass />} />
         </Route>
       </Routes>
     </BrowserRouter>
