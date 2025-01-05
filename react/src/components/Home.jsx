@@ -53,8 +53,9 @@ const Home = () => {
           {posts.map(post => (
             <div key={post.id} className="post">
               <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}></p>
+              {post.image && <img src={'http://localhost:3000' + post.image}  style={{ width: '400px', margin: '0 auto' }} alt="Post" className="post-image"/> }
               <p>
-                <span style={{ color: 'red' }}>FEELING: </span> 
+                <span style={{ color: 'red', fontWeight: 'bold' }}>FEELING: </span> 
                 <span style={{ color: 'purple' }}>{post.mood}</span> {post.emoji}
               </p>
               <p>{new Date(post.timestamp).toLocaleString()}</p>

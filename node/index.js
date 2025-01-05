@@ -9,8 +9,19 @@ import SQLiteStore from 'connect-sqlite3';
 import * as OTPAuth from "otpauth";
 import * as base32 from "hi-base32";
 import QRCode from "qrcode";
+import multer from 'multer';
+import { fileURLToPath } from 'url';
+
 const app = express();
 const SQLiteStoreSession = SQLiteStore(session);
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 10 * 1024 * 1024 } // Set file size limit to 10MB
+});
+
+// Get the directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -43,7 +54,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  // await db.exec(`DROP TABLE IF EXISTS users`);
+  //await db.exec(`DROP TABLE IF EXISTS posts`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -58,6 +69,7 @@ const createTable = async () => {
     body TEXT NOT NULL,
     mood TEXT NOT NULL,
     emoji TEXT NOT NULL,
+    image TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (postedid) REFERENCES users(id)
   )`);
@@ -186,17 +198,21 @@ app.post('/api/login', async (req, res) => {
 });
 
 // POST method to add a new post
-app.post('/api/newpost', async (req, res) => {
+app.post('/api/newpost', upload.single('image'), async (req, res) => {
   try {
     const { body, mood, emoji } = req.body;
     const userId = req.session.userId;
+    const image = req.file ? `/uploads/${req.file.filename}` : null; // Save the image path if an image is uploaded
+
     console.log('User ID:', userId);
     console.log('Request Body:', req.body);
+    console.log('Uploaded File:', req.file);
+    console.log('Image Path:', image); // Log the image path
 
     if (!userId) {
       return res.status(401).send('Unauthorized');
     }
-
+    //todo przywroc dopuszczalne znaki
     // Validate allowed characters (including Unicode letters and numbers)
     // const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%^&*+=<>]+$/u;
     // if (!allowedChars.test(body) || !allowedChars.test(mood)) {
@@ -205,8 +221,9 @@ app.post('/api/newpost', async (req, res) => {
     // }
 
     const db = await dbPromise;
-    await db.run(`INSERT INTO posts (postedid, body, mood, emoji) VALUES (?, ?, ?, ?)`, [userId, body, mood, emoji]);
+    await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image) VALUES (?, ?, ?, ?, ?)`, [userId, body, mood, emoji, image]);
     res.status(200).send('Post created successfully');
+    //TODO: Fix inage not being added to the post
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);
@@ -257,7 +274,7 @@ app.get('/api/posts', async (req, res) => {
   try {
     const db = await dbPromise;
     const posts = await db.all(`
-      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.timestamp, users.name as userName
+      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.image, posts.timestamp, users.name as userName
       FROM posts
       JOIN users ON posts.postedid = users.id
       ORDER BY posts.timestamp DESC
@@ -280,7 +297,7 @@ app.delete('/api/posts/:id', async (req, res) => {
     }
 
     const db = await dbPromise;
-    const post = await db.get(`SELECT postedid FROM posts WHERE id = ?`, postId);
+    const post = await db.get(`SELECT postedid, image FROM posts WHERE id = ?`, postId);
 
     if (!post) {
       return res.status(404).send('Post not found');
@@ -288,6 +305,18 @@ app.delete('/api/posts/:id', async (req, res) => {
 
     if (post.postedid !== userId) {
       return res.status(403).send('Forbidden');
+    }
+
+    // Delete the image file if it exists
+    if (post.image) {
+      const imagePath = path.join(__dirname, post.image);
+      fs.unlink(imagePath, (err) => {
+        if (err) {
+          console.error('Error deleting image:', err);
+        } else {
+          console.log('Image deleted:', imagePath);
+        }
+      });
     }
 
     await db.run(`DELETE FROM posts WHERE id = ?`, postId);
@@ -410,5 +439,5 @@ app.get('/api/user/posts', async (req, res) => {
     console.log(error);
   }
 });
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.listen(3000, () => console.log(`App running on port 3000.`));

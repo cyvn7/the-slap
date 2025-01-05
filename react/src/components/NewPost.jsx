@@ -8,9 +8,11 @@ const NewPost = () => {
   const [content, setContent] = useState('');
   const [mood, setMood] = useState('');
   const [emoji, setEmoji] = useState('');
+  const [image, setImage] = useState(null);
   const [showPicker, setShowPicker] = useState(false);
   const [userName, setUserName] = useState('');
   const editorRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -44,27 +46,57 @@ const NewPost = () => {
     document.execCommand('underline');
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.size > 20 * 1024 * 1024) { // Check if file size is greater than 20MB
+      alert('File size should not exceed 20MB');
+      fileInputRef.current.value = ''; // Clear the file input
+      return;
+    }
+    setImage(file);
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formattedContent = editorRef.current.innerHTML;
-    console.log('Post created:', formattedContent);
     if (!formattedContent || !mood || !emoji) {
       alert('All fields are required.');
       return;
     }
+
+    const formData = new FormData();
+    formData.append('body', formattedContent);
+    formData.append('mood', mood);
+    formData.append('emoji', emoji);
+    if (image) {
+      formData.append('image', image);
+    }
+
     try {
-      const response = await axios.post('http://localhost:8000/api/newpost', {
-        body: formattedContent,
-        mood: mood,
-        emoji: emoji
-      }, { withCredentials: true });
+      const response = await axios.post('http://localhost:8000/api/newpost', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        },
+        withCredentials: true
+      });
+
       if (response.status === 200) {
         alert('Post created successfully');
-        // setContent('');
-        // setMood('');
-        // setEmoji('');
-        //editorRef.current.innerHTML = '';
-        //UNCOMMMENT THESE AFTER TESTING
+        setContent('');
+        setMood('');
+        setEmoji('');
+        setImage(null);
+        editorRef.current.innerHTML = '';
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       }
     } catch (error) {
       console.error('Error creating post:', error);
@@ -83,7 +115,6 @@ const NewPost = () => {
         <button type="button" onClick={handleBold}><b>B</b></button>
         <button type="button" onClick={handleItalic}><i>I</i></button>
         <button type="button" onClick={handleUnderline}><u>U</u></button>
-        <button type="button">Attach Image</button>
       </div>
       <div
         contentEditable
@@ -115,6 +146,16 @@ const NewPost = () => {
         {showPicker && (
           <div className="emoji-picker">
             <Picker data={data} onEmojiSelect={handleEmojiSelect} />
+          </div>
+        )}
+      </div>
+      <div className="form-group">
+        <label htmlFor="image">Attach Image:</label>
+        <input type="file" id="image" accept="image/jpeg, image/png, image/gif" onChange={handleImageChange} ref={fileInputRef} />
+        {image && (
+          <div className="image-preview">
+            <p>{image.name}</p>
+            <button type="button" onClick={handleRemoveImage}>Remove Image</button>
           </div>
         )}
       </div>
