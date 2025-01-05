@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import axios from 'axios';
@@ -10,6 +10,7 @@ const NewPost = () => {
   const [emoji, setEmoji] = useState('');
   const [showPicker, setShowPicker] = useState(false);
   const [userName, setUserName] = useState('');
+  const editorRef = useRef(null);
 
   useEffect(() => {
     const fetchSession = async () => {
@@ -45,22 +46,25 @@ const NewPost = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content || !mood || !emoji) {
+    const formattedContent = editorRef.current.innerHTML;
+    console.log('Post created:', formattedContent);
+    if (!formattedContent || !mood || !emoji) {
       alert('All fields are required.');
       return;
     }
     try {
       const response = await axios.post('http://localhost:8000/api/newpost', {
-        body: content,
+        body: formattedContent,
         mood: mood,
         emoji: emoji
       }, { withCredentials: true });
-
       if (response.status === 200) {
         alert('Post created successfully');
-        setContent('');
-        setMood('');
-        setEmoji('');
+        // setContent('');
+        // setMood('');
+        // setEmoji('');
+        //editorRef.current.innerHTML = '';
+        //UNCOMMMENT THESE AFTER TESTING
       }
     } catch (error) {
       console.error('Error creating post:', error);
@@ -76,15 +80,16 @@ const NewPost = () => {
       </div>
       <h2>Create a New Post</h2>
       <div className="editor-toolbar">
-        <button onClick={handleBold}><b>B</b></button>
-        <button onClick={handleItalic}><i>I</i></button>
-        <button onClick={handleUnderline}><u>U</u></button>
-        <button>Attach Image</button>
+        <button type="button" onClick={handleBold}><b>B</b></button>
+        <button type="button" onClick={handleItalic}><i>I</i></button>
+        <button type="button" onClick={handleUnderline}><u>U</u></button>
+        <button type="button">Attach Image</button>
       </div>
       <div
         contentEditable
         className="text-editor"
-        onInput={(e) => setContent(e.currentTarget.textContent)}
+        ref={editorRef}
+        onInput={(e) => setContent(e.currentTarget.innerHTML)}
       ></div>
       <div className="mood-container">
         <label htmlFor="mood" className="mood-label">FEELING:</label>
@@ -104,7 +109,7 @@ const NewPost = () => {
               {emoji}
             </span>
           ) : (
-            <button onClick={() => setShowPicker(true)}>Select Emoji</button>
+            <button type="button" onClick={() => setShowPicker(true)}>Select Emoji</button>
           )}
         </div>
         {showPicker && (

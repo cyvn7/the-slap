@@ -191,16 +191,18 @@ app.post('/api/newpost', async (req, res) => {
     const { body, mood, emoji } = req.body;
     const userId = req.session.userId;
     console.log('User ID:', userId);
+    console.log('Request Body:', req.body);
 
     if (!userId) {
       return res.status(401).send('Unauthorized');
     }
 
     // Validate allowed characters (including Unicode letters and numbers)
-    const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-]+$/u;
-    if (!allowedChars.test(body) || !allowedChars.test(mood)) {
-      return res.status(400).send('Invalid characters in post content or mood.');
-    }
+    // const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%^&*+=<>]+$/u;
+    // if (!allowedChars.test(body) || !allowedChars.test(mood)) {
+    //   console.log('Invalid characters in post content or mood.');
+    //   return res.status(400).send('Invalid characters in post content or mood.');
+    // }
 
     const db = await dbPromise;
     await db.run(`INSERT INTO posts (postedid, body, mood, emoji) VALUES (?, ?, ?, ?)`, [userId, body, mood, emoji]);

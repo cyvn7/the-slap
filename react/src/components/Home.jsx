@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import DOMPurify from 'dompurify';
 import './styles/Home.css';
 
 const Home = () => {
@@ -45,28 +46,21 @@ const Home = () => {
   };
 
   return (
-    <div>
-      {isLoggedIn ? (
-        <div>
-          <h1>Posts</h1>
-          <div className="posts-container">
-            {posts.map(post => (
-              <div key={post.id} className="post">
-                <h3>{post.userName}</h3>
-                <p>{post.body}</p>
-                <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple', fontWeight: 'bold' }}>{post.mood}</span> {post.emoji}</p>
-                <p>{new Date(post.timestamp).toLocaleString()}</p>
-                {post.userName === userName && (
-                  <button onClick={() => handleDelete(post.id)}>Delete</button>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div>
-          <h1>You are not logged in</h1>
-          <button onClick={() => window.location.href = '/login'}>Go to Login Page</button>
+    <div className="home-container">
+      <h1>Welcome, {userName}</h1>
+      {isLoggedIn && (
+        <div className="posts-container">
+          {posts.map(post => (
+            <div key={post.id} className="post">
+              <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}></p>
+              <p>
+                <span style={{ color: 'red' }}>FEELING: </span> 
+                <span style={{ color: 'purple' }}>{post.mood}</span> {post.emoji}
+              </p>
+              <p>{new Date(post.timestamp).toLocaleString()}</p>
+              <button onClick={() => handleDelete(post.id)}>Delete</button>
+            </div>
+          ))}
         </div>
       )}
     </div>

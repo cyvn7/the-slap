@@ -27,10 +27,15 @@ const Profile = () => {
     fetchSession();
   }, []);
 
-  const handleLogout = async () => {
-    await axios.post('http://localhost:8000/api/logout', {}, { withCredentials: true });
-    setSession({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
-    window.location.href = '/login';
+  const handleDelete = async (postId) => {
+    try {
+      const response = await axios.delete(`http://localhost:8000/api/posts/${postId}`, { withCredentials: true });
+      if (response.status === 200) {
+        setPosts(posts.filter(post => post.id !== postId));
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
   };
 
   if (!session.loggedIn) {
