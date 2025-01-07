@@ -52,6 +52,7 @@ const Home = () => {
         <div className="posts-container">
           {posts.map(post => (
             <div key={post.id} className="post">
+              <h3>{post.userName}</h3>
               <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}></p>
               {post.image && <img src={'http://localhost:3000' + post.image}  style={{ width: '400px', margin: '0 auto' }} alt="Post" className="post-image"/> }
               <p>
@@ -59,7 +60,9 @@ const Home = () => {
                 <span style={{ color: 'purple' }}>{post.mood}</span> {post.emoji}
               </p>
               <p>{new Date(post.timestamp).toLocaleString()}</p>
-              <button onClick={() => handleDelete(post.id)}>Delete</button>
+              {post.userName === userName && (
+                <button onClick={() => handleDelete(post.id)}>Delete</button>
+              )}
             </div>
           ))}
         </div>
