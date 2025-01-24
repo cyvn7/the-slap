@@ -17,7 +17,7 @@ const NewPost = () => {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
+        const response = await axios.get('https://localhost/api/session', { withCredentials: true });
         if (response.data.loggedIn) {
           setUserName(response.data.userName);
         }
@@ -80,7 +80,7 @@ const NewPost = () => {
     }
 
     try {
-      const response = await axios.post('http://localhost:8000/api/newpost', formData, {
+      const response = await axios.post('https://localhost/api/newpost', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         },

@@ -10,7 +10,7 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:8000/api/login', { email, password, token }, { withCredentials: true });
+      const res = await axios.post('https://localhost/api/login', { email, password, token }, { withCredentials: true });
       if (res.status === 200) {
         window.location.href = '/';
       }
@@ -22,7 +22,7 @@ const Login = () => {
       } else {
         alert('Błąd logowania: ' + error.message);
       }
-      console.error(error);
+      console.error("error " + error);
     }
   };
 

@@ -8,7 +8,7 @@ const Layout = () => {
 
   useEffect(() => {
     const fetchSession = async () => {
-      const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
+      const response = await axios.get('https://localhost/api/session', { withCredentials: true });
       setSession(response.data);
     };
 

@@ -7,7 +7,7 @@ const Profile = () => {
 
   useEffect(() => {
     const fetchSession = async () => {
-      const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
+      const response = await axios.get('https://localhost/api/session', { withCredentials: true });
       setSession(response.data);
 
       if (response.data.loggedIn) {
@@ -17,7 +17,7 @@ const Profile = () => {
 
     const fetchUserPosts = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/user/posts', { withCredentials: true });
+        const response = await axios.get('https://localhost/api/user/posts', { withCredentials: true });
         setPosts(response.data);
       } catch (error) {
         console.error('Error fetching user posts:', error);
@@ -29,7 +29,7 @@ const Profile = () => {
 
   const handleDelete = async (postId) => {
     try {
-      const response = await axios.delete(`http://localhost:8000/api/posts/${postId}`, { withCredentials: true });
+      const response = await axios.delete(`https://localhost/api/posts/${postId}`, { withCredentials: true });
       if (response.status === 200) {
         setPosts(posts.filter(post => post.id !== postId));
       }

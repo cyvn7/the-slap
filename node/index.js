@@ -3,7 +3,7 @@ import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 import fs from 'fs';
 import path from 'path';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import session from 'express-session';
 import SQLiteStore from 'connect-sqlite3';
 import * as OTPAuth from "otpauth";
@@ -11,6 +11,9 @@ import * as base32 from "hi-base32";
 import QRCode from "qrcode";
 import multer from 'multer';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
+
+
 
 const app = express();
 const SQLiteStoreSession = SQLiteStore(session);
@@ -18,6 +21,14 @@ const upload = multer({
   dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 } // Set file size limit to 10MB
 });
+
+// Dodaj przed innymi middleware
+app.use(cors({
+  origin: 'https://localhost',
+  methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Get the directory name
 const __filename = fileURLToPath(import.meta.url);
@@ -54,7 +65,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  //await db.exec(`DROP TABLE IF EXISTS posts`);
+  // await db.exec(`DROP TABLE IF EXISTS posts`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -73,6 +84,15 @@ const createTable = async () => {
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (postedid) REFERENCES users(id)
   )`);
+
+  // Print out the contents of the users table
+  const users = await db.all(`SELECT * FROM users`);
+  console.log('Users table:', users);
+
+  // Print out the contents of the posts table
+  const posts = await db.all(`SELECT * FROM posts`);
+  console.log('Posts table:', posts);
+  console.log("hello");
 };
 
 createTable();
@@ -96,6 +116,7 @@ app.get('/api/all', async (req, res) => {
 
 // POST method to insert a user
 app.post('/api/register', async (req, res) => {
+  console.log("hello");
   try {
     const { name, email, password } = req.body;
     const salt = await bcrypt.genSalt(10); // Generate salt with 10 rounds
