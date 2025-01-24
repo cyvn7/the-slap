@@ -11,6 +11,7 @@ services:
       - node-network
     volumes: 
       - ./node:/usr/src/app
+      - ./node/uploads:/usr/src/app/uploads
       - /usr/src/app/node_modules
     tty: true
     ports: 
