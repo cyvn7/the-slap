@@ -15,13 +15,7 @@ const Login = () => {
         window.location.href = '/';
       }
     } catch (error) {
-      if (error.response && error.response.status === 400) {
-        alert(error.response.data);
-      } else if (error.response && error.response.status === 401) {
-        alert(error.response.data);
-      } else {
-        alert('Błąd logowania: ' + error.message);
-      }
+      alert('Error ' + error.response.status + ': ' + error.response.data);
       console.error("error " + error);
     }
   };

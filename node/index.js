@@ -66,13 +66,15 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  // await db.exec(`DROP TABLE IF EXISTS posts`);
+ // await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    secret TEXT
+    secret TEXT,
+    failed_attempts INTEGER DEFAULT 0,
+    last_failed_attempt DATETIME
   )`);
 
   await db.exec(`CREATE TABLE IF NOT EXISTS posts (
@@ -141,7 +143,6 @@ app.post('/api/register', async (req, res) => {
     // Generate QR code URL
     const otpauth_url = totp.toString();
     console.log('Registration secret:', secretBase32);
-    console.log('OTP URL:', otpauth_url);
 
     // Generate and send the QR code as a response
     QRCode.toDataURL(otpauth_url, (err) => {
@@ -167,10 +168,53 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
+const checkLoginAttempts = async (email) => {
+  const db = await dbPromise;
+  const user = await db.get(`
+    SELECT failed_attempts, last_failed_attempt 
+    FROM users 
+    WHERE email = ?
+  `, email);
+
+  if (!user) return true; // Allow login attempt if user doesn't exist
+
+  const now = new Date();
+  const lockoutDuration = 15 * 60 * 1000; // 15 minutes
+  const maxAttempts1 = 5;
+  const maxAttempts2 = 8;
+  const maxAttempts3 = 10;
+//napraw to. powinno wykrywac okienka 0-5, 5-8, 8-10, 10+
+  if (user.failed_attempts >= maxAttempts3) {
+    return 'Account is permanently locked due to too many failed login attempts.';
+  }
+
+  if (user.failed_attempts == maxAttempts2 && 
+      user.last_failed_attempt && 
+      (now - new Date(user.last_failed_attempt)) < lockoutDuration) {
+    const remainingTime = Math.ceil((lockoutDuration - (now - new Date(user.last_failed_attempt))) / 60000);
+    return `Account is locked. Please try again in ${remainingTime} minutes.`;
+  }
+
+  if (user.failed_attempts == maxAttempts1 && 
+      user.last_failed_attempt && 
+      (now - new Date(user.last_failed_attempt)) < lockoutDuration) {
+    const remainingTime = Math.ceil((lockoutDuration - (now - new Date(user.last_failed_attempt))) / 60000);
+    return `Account is locked. Please try again in ${remainingTime} minutes.`;
+  }
+
+  return true;
+};
+
+
 // POST method to login a user
 app.post('/api/login', async (req, res) => {
   try {
     const { email, password, token } = req.body;
+    const loginCheck = await checkLoginAttempts(email);
+    if (loginCheck !== true) {
+      console.log(loginCheck);
+      return res.status(429).send(loginCheck);
+    }
     const db = await dbPromise;
     const user = await db.get(`SELECT id, name, password, secret FROM users WHERE email = ?`, email);
 
@@ -180,7 +224,15 @@ app.post('/api/login', async (req, res) => {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(400).send('Invalid email or password');
+      // Increment failed attempts
+      await db.run(`
+        UPDATE users 
+        SET failed_attempts = failed_attempts + 1,
+            last_failed_attempt = CURRENT_TIMESTAMP
+        WHERE id = ?`, 
+        user.id
+      );
+      return res.status(401).send('Invalid email or password');
     }
 
     console.log('Stored secret:', user.secret); // Log stored secret
@@ -205,8 +257,22 @@ app.post('/api/login', async (req, res) => {
     console.log('Token validation result:', delta); // Log validation result
 
     if (delta === null) {
+      await db.run(`
+        UPDATE users 
+        SET failed_attempts = failed_attempts + 1,
+            last_failed_attempt = CURRENT_TIMESTAMP
+        WHERE id = ?`, 
+        user.id
+      );
       return res.status(401).send('Invalid 2FA token');
     }
+    await db.run(`
+      UPDATE users 
+      SET failed_attempts = 0,
+          last_failed_attempt = NULL 
+      WHERE id = ?`, 
+      user.id
+    );
 
     req.session.userId = user.id;
     req.session.userName = user.name;

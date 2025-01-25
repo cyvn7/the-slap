@@ -36,7 +36,7 @@ export default function Register() {
     }
     try {
       console.log("form");
-      const res = await axios.post('http://localhost:3000/api/register', form);
+      const res = await axios.post('https://localhost/api/register', form);
       alert(`Zarejestrowano: ${JSON.stringify(res.data)}`);
     } catch (error) {
       console.error(error.res);
