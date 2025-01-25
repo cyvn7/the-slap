@@ -51,7 +51,11 @@ const Home = () => {
       {isLoggedIn && (
         <div className="posts-container">
           {posts.map(post => (
+            
             <div key={post.id} className="post">
+              <div className={`verification-badge ${post.verified ? 'verified' : 'unverified'}`}>
+                {post.verified ? '✓ Verified Post' : '✗ Unverified Post'}
+              </div>
               <h3>{post.userName}</h3>
               <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}></p>
               {post.image && <img src={'https://localhost/' + post.image}  style={{ width: '400px', margin: '0 auto' }} alt="Post" className="post-image"/> }

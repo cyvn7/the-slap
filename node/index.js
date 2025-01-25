@@ -12,7 +12,7 @@ import QRCode from "qrcode";
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
-
+import crypto from 'crypto';
 
 
 const app = express();
@@ -66,7 +66,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
- // await db.exec(`DROP TABLE IF EXISTS users`);
+  //await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -74,7 +74,9 @@ const createTable = async () => {
     password TEXT NOT NULL,
     secret TEXT,
     failed_attempts INTEGER DEFAULT 0,
-    last_failed_attempt DATETIME
+    last_failed_attempt DATETIME,
+    public_key TEXT,
+    private_key TEXT
   )`);
 
   await db.exec(`CREATE TABLE IF NOT EXISTS posts (
@@ -85,6 +87,7 @@ const createTable = async () => {
     emoji TEXT NOT NULL,
     image TEXT,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    signature TEXT,
     FOREIGN KEY (postedid) REFERENCES users(id)
   )`);
 
@@ -125,7 +128,6 @@ app.post('/api/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10); // Generate salt with 10 rounds
     const hashedPassword = await bcrypt.hash(password, salt); // Hash the password with the salt
 
-      // Generate 2FA secret
     // Generate 2FA secret
     const secret = new OTPAuth.Secret();
     const secretBase32 = secret.base32;
@@ -140,17 +142,29 @@ app.post('/api/register', async (req, res) => {
       secret: secretBase32
     });
 
+    const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem'
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem'
+      }
+    });
+
     // Generate QR code URL
     const otpauth_url = totp.toString();
     console.log('Registration secret:', secretBase32);
 
-    // Generate and send the QR code as a response
+    // Generate and send the QR code as a responsedd
     QRCode.toDataURL(otpauth_url, (err) => {
       console.log(otpauth_url)
       })
 
     const db = await dbPromise;
-    await db.run(`INSERT INTO users (name, email, password, secret) VALUES (?, ?, ?, ?)`, [name, email, hashedPassword, secretBase32]);
+    await db.run(`INSERT INTO users (name, email, password, secret, public_key, private_key) VALUES (?, ?, ?, ?, ?, ?)`, [name, email, hashedPassword, secretBase32, publicKey, privateKey]);
     res.status(200).send(req.body);
   } catch (error) {
     if (error.code === 'SQLITE_CONSTRAINT') {
@@ -285,31 +299,49 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+const createSignatureMessage = (data) => JSON.stringify({
+  body: data.body,
+  emoji: data.emoji,
+  mood: data.mood,
+  userId: data.userId
+}, Object.keys({}).sort());
+
 // POST method to add a new post
 app.post('/api/newpost', upload.single('image'), async (req, res) => {
   try {
+    const db = await dbPromise;
     const { body, mood, emoji } = req.body;
     const userId = req.session.userId;
-    const image = req.file ? `/uploads/${req.file.filename}` : null; // Save the image path if an image is uploaded
-
-    console.log('User ID:', userId);
-    console.log('Request Body:', req.body);
-    console.log('Uploaded File:', req.file);
-    console.log('Image Path:', image); // Log the image path
 
     if (!userId) {
       return res.status(401).send('Unauthorized');
     }
+
+
+    const user = await db.get('SELECT private_key FROM users WHERE id = ?', userId);
+    const image = req.file ? `/uploads/${req.file.filename}` : null; // Save the image path if an image is uploaded
+    const sign = crypto.createSign('RSA-SHA256');
+    sign.update(createSignatureMessage({
+      body, mood, emoji, userId
+    }));
+    const signature = sign.sign(user.private_key, 'base64');
+    
+    console.log('User ID:', userId);
+    console.log('Request Body:', req.body);
+    console.log('Uploaded File:', req.file);
+    console.log('Image Path:', image); // Log the image path
+    console.log('priv_key:', user.private_key);
+
+
     //todo przywroc dopuszczalne znaki
     // Validate allowed characters (including Unicode letters and numbers)
     // const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%^&*+=<>]+$/u;
     // if (!allowedChars.test(body) || !allowedChars.test(mood)) {
-    //   console.log('Invalid characters in post content or mood.');
+    //   console.log('Invalid characters in post content or mood.');d
     //   return res.status(400).send('Invalid characters in post content or mood.');
     // }
 
-    const db = await dbPromise;
-    await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image) VALUES (?, ?, ?, ?, ?)`, [userId, body, mood, emoji, image]);
+    await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (?, ?, ?, ?, ?, ?)`, [userId, body, mood, emoji, image, signature]);
     res.status(200).send('Post created successfully');
     //TODO: Fix inage not being added to the post
   } catch (error) {
@@ -357,20 +389,43 @@ app.post('/api/logout', (req, res) => {
   });
 });
 
+
+
 // GET method to get all posts
 app.get('/api/posts', async (req, res) => {
   try {
     const db = await dbPromise;
     const posts = await db.all(`
-      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.image, posts.timestamp, users.name as userName
+      SELECT 
+        posts.*,
+        users.name as userName,
+        users.public_key as userPublicKey
       FROM posts
       JOIN users ON posts.postedid = users.id
       ORDER BY posts.timestamp DESC
     `);
-    res.status(200).json(posts);
+
+    const postsWithVerification = posts.map(post => {
+      let verified = false;
+      try {
+        const verify = crypto.createVerify('RSA-SHA256');
+        verify.update(createSignatureMessage({
+          body: post.body,
+          mood: post.mood,
+          emoji: post.emoji,
+          userId: post.postedid
+        }));
+        verified = verify.verify(post.userPublicKey, post.signature, 'base64');
+      } catch (error) {
+        console.error(`Verification error for post ${post.id}:`, error);
+      }
+      return { ...post, verified };
+    });
+
+    res.status(200).json(postsWithVerification);
   } catch (error) {
-    res.status(500).send('Error');
-    console.log(error);
+    console.error('Error fetching posts:', error);
+    res.status(500).send('Error fetching posts');
   }
 });
 

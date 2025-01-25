@@ -19,3 +19,22 @@
   .post p {
     margin: 5px 0;
   }
+
+  .verification-badge {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .verified {
+    background-color: #e6ffe6;
+    color: #008000;
+    border: 1px solid #008000;
+  }
+  
+  .unverified {
+    background-color: #ffe6e6;
+    color: #ff0000;
+    border: 1px solid #ff0000;
+  }
