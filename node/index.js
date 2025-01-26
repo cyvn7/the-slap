@@ -58,7 +58,7 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-// Open SQLite database
+// Open SQLite database 
 const dbPromise = open({
   filename: path.join(dbDir, 'theslap.sqlite'),
   driver: sqlite3.Database
@@ -91,6 +91,17 @@ const createTable = async () => {
     FOREIGN KEY (postedid) REFERENCES users(id)
   )`);
 
+  await db.exec(`CREATE TABLE IF NOT EXISTS logins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    username TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    success BOOLEAN,
+    attempt_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )`);
+
   // Print out the contents of the users table
   const users = await db.all(`SELECT * FROM users`);
   console.log('Users table:', users);
@@ -98,6 +109,10 @@ const createTable = async () => {
   // Print out the contents of the posts table
   const posts = await db.all(`SELECT * FROM posts`);
   console.log('Posts table:', posts);
+
+  // Print out the contents of the logins table
+  const logins = await db.all(`SELECT * FROM logins`);
+  console.log('Logins table:', logins);
   console.log("hello");
 };
 
@@ -223,22 +238,31 @@ const checkLoginAttempts = async (email) => {
 // POST method to login a user
 app.post('/api/login', async (req, res) => {
   try {
+    const db = await dbPromise;
+    const ip = req.ip;
+    const userAgent = req.headers['user-agent'];
     const { email, password, token } = req.body;
     const loginCheck = await checkLoginAttempts(email);
     if (loginCheck !== true) {
       console.log(loginCheck);
       return res.status(429).send(loginCheck);
     }
-    const db = await dbPromise;
     const user = await db.get(`SELECT id, name, password, secret FROM users WHERE email = ?`, email);
+    const logLoginAttempt = async (success) => {
+      await db.run(`
+        INSERT INTO logins (user_id, username, ip_address, user_agent, success)
+        VALUES (?, ?, ?, ?, ?)
+      `, [user?.id || null, email, ip, userAgent, success]);
+    };
 
     if (!user) {
+      await logLoginAttempt(false);
       return res.status(400).send('Invalid email or password');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      // Increment failed attempts
+      await logLoginAttempt(false);
       await db.run(`
         UPDATE users 
         SET failed_attempts = failed_attempts + 1,
@@ -271,6 +295,7 @@ app.post('/api/login', async (req, res) => {
     console.log('Token validation result:', delta); // Log validation result
 
     if (delta === null) {
+      await logLoginAttempt(false);
       await db.run(`
         UPDATE users 
         SET failed_attempts = failed_attempts + 1,
@@ -288,6 +313,7 @@ app.post('/api/login', async (req, res) => {
       user.id
     );
 
+    await logLoginAttempt(true);
     req.session.userId = user.id;
     req.session.userName = user.name;
     req.session.userIp = req.ip; // Store the user's IP address in the session
@@ -582,5 +608,33 @@ app.get('/api/user/posts', async (req, res) => {
     console.log(error);
   }
 });
+
+app.get('/api/login-history', async (req, res) => {
+  try {
+    if (!req.session.userId) {
+      return res.status(401).send('Unauthorized');
+    }
+
+    const db = await dbPromise;
+    const loginHistory = await db.all(`
+      SELECT 
+        logins.username,
+        logins.ip_address,
+        logins.user_agent,
+        logins.success,
+        logins.attempt_time
+      FROM logins
+      ORDER BY attempt_time DESC
+      LIMIT 100
+    `);
+
+    res.json(loginHistory);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+
+
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.listen(3000, () => console.log(`App running on port 3000.`));
