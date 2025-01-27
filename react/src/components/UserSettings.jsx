@@ -39,6 +39,15 @@ const UserSettings = () => {
     window.location.href = '/login';
   };
 
+  const handleAccountDeletion = async () => {
+    if (window.confirm('Are you sure you want to delete your account?')) {
+      const userId = session.userId;
+      await axios.delete(`https://localhost/api/user/${userId}`, { withCredentials: true });
+      setSession({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
+      window.location.href = '/login';
+    }
+  };
+
   if (isLoading) {
     return <div>Loading...</div>;
   }
@@ -50,6 +59,9 @@ const UserSettings = () => {
 
   return (
     <div className="profile-container">
+      <button onClick={handleLogout}>Wyloguj się</button>       
+      <button onClick={() => window.location.href = '/reset'}>Zmień hasło</button>
+      <button onClick={handleAccountDeletion}>Usuń konto</button>
       <h1>Settings</h1>
       <h2>Logged in as:</h2>
       <p>Name: {session.userName}</p>
@@ -66,8 +78,6 @@ const UserSettings = () => {
           </div>
         ))}
       </div>
-      <button onClick={handleLogout}>Wyloguj się</button>
-      <button onClick={() => window.location.href = '/reset'}>Zmień hasło</button>
     </div>
   );
 };

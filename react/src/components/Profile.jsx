@@ -1,31 +1,41 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import axios from 'axios';
 
 const Profile = () => {
   const [session, setSession] = useState({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
   const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);       
+  const navigate = useNavigate();
+  
+  const fetchUserPosts = async () => {
+    try {
+      const response = await axios.get('https://localhost/api/user/posts', { withCredentials: true });
+      setPosts(response.data);
+    } catch (error) {
+      console.error('Error fetching user posts:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     const fetchSession = async () => {
-      const response = await axios.get('https://localhost/api/session', { withCredentials: true });
-      setSession(response.data);
-
-      if (response.data.loggedIn) {
-        fetchUserPosts();
-      }
-    };
-
-    const fetchUserPosts = async () => {
       try {
-        const response = await axios.get('https://localhost/api/user/posts', { withCredentials: true });
-        setPosts(response.data);
+        const response = await axios.get('https://localhost/api/session', { withCredentials: true });
+        setSession(response.data);
+        if (response.data.loggedIn) {
+          fetchUserPosts();
+        }
       } catch (error) {
-        console.error('Error fetching user posts:', error);
+        console.error('Error fetching session:', error);
+        navigate('/login');
       }
     };
 
     fetchSession();
-  }, []);
+  }, [navigate]);
 
   const handleDelete = async (postId) => {
     try {
@@ -38,6 +48,10 @@ const Profile = () => {
     }
   };
 
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
   if (!session.loggedIn) {
     return <p>Nie jesteś zalogowany</p>;
   }
@@ -48,7 +62,8 @@ const Profile = () => {
       <div className="posts-container">
         {posts.map(post => (
               <div key={post.id} className="post">
-              <p>{post.body}</p>
+              <p dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.body) }}></p>
+              {post.image && <img src={'https://localhost/' + post.image}  style={{ width: '400px', margin: '0 auto' }} alt="Post" className="post-image"/> }
               <p style={{ color: 'red' }}>FEELING: <span style={{ color: 'purple', fontWeight: 'bold' }}>{post.mood}</span> {post.emoji}</p>
               <p>{new Date(post.timestamp).toLocaleString()}</p>
               <button onClick={() => handleDelete(post.id)}>Delete</button>

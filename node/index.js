@@ -393,16 +393,57 @@ app.get('/api/session', (req, res) => {
   }
 });
 
-// DELETE method to delete a user
 app.delete('/api/user/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const db = await dbPromise;
-    await db.run(`DELETE FROM users WHERE id = ?`, id);
-    res.status(200).send(`User with ID ${id} deleted`);
+
+    // Get all user's posts with images
+    const userPosts = await db.all(
+      `SELECT image FROM posts WHERE postedid = ?`, 
+      id
+    );
+
+    // Delete associated image files
+    for (const post of userPosts) {
+      if (post.image) {
+        const imagePath = path.join(__dirname, post.image);
+        try {
+          await fs.promises.unlink(imagePath);
+          console.log('Deleted image:', imagePath);
+        } catch (err) {
+          console.error('Error deleting image:', err);
+        }
+      }
+    }
+
+    // Delete all user's posts
+    await db.run(
+      `DELETE FROM posts WHERE postedid = ?`, 
+      id
+    );
+
+    // Delete user
+    await db.run(
+      `DELETE FROM users WHERE id = ?`, 
+      id
+    );
+
+    await db.run(
+      `DELETE FROM logins WHERE user_id = ?`,
+      id
+    )
+
+    req.session.destroy(err => {
+      if (err) {
+        console.error('Error clearing session:', err);
+      }
+    });
+
+    res.status(200).send(`User with ID ${id} and all associated data deleted`);
   } catch (error) {
-    res.status(500).send('Error');
-    console.log(error);
+    console.error('Error deleting user:', error);
+    res.status(500).send('Error deleting user and associated data');
   }
 });
 
@@ -596,7 +637,7 @@ app.get('/api/user/posts', async (req, res) => {
 
     const db = await dbPromise;
     const posts = await db.all(`
-      SELECT posts.id, posts.body, posts.mood, posts.emoji, posts.timestamp
+      SELECT posts.*
       FROM posts
       WHERE posts.postedid = ?
       ORDER BY posts.timestamp DESC
