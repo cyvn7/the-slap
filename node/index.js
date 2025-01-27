@@ -618,6 +618,7 @@ app.get('/api/login-history', async (req, res) => {
     const db = await dbPromise;
     const loginHistory = await db.all(`
       SELECT 
+        logins.id,
         logins.username,
         logins.ip_address,
         logins.user_agent,
