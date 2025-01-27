@@ -55,7 +55,7 @@ const Layout = () => {
             </li>
           )}
           {/* <li>
-            <Link to="/register">Register</Link>
+            <Link to="/twofa">2FA (delete this later!!)</Link>
           </li> */}
         </ul>
       </nav>

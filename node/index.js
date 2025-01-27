@@ -66,7 +66,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  //await db.exec(`DROP TABLE IF EXISTS users`);
+  await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -180,7 +180,11 @@ app.post('/api/register', async (req, res) => {
 
     const db = await dbPromise;
     await db.run(`INSERT INTO users (name, email, password, secret, public_key, private_key) VALUES (?, ?, ?, ?, ?, ?)`, [name, email, hashedPassword, secretBase32, publicKey, privateKey]);
-    res.status(200).send(req.body);
+    // res.status(200).send(req.body);
+    res.status(200).json({
+      user: { name, email },
+      qrUrl: otpauth_url
+    });
   } catch (error) {
     if (error.code === 'SQLITE_CONSTRAINT') {
       if (error.message.includes('users.name')) {

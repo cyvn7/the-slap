@@ -9,6 +9,7 @@ import Profile from "./components/Profile";
 import NewPost from "./components/NewPost";
 import ResetPass from "./components/ResetPass";
 import UserSettings from "./components/UserSettings";
+import TwoFactor from "./components/TwoFactor";
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="newpost" element={<NewPost />} />
         <Route path="reset" element={<ResetPass />} />
         <Route path="settings" element={<UserSettings />} />
+        <Route path="twofa" element={<TwoFactor />} />
         </Route>
       </Routes>
     </BrowserRouter>

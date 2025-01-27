@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../index.css'; // Import stylów CSS
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: ''});
+  const navigate = useNavigate();
   const [passwordValidations, setPasswordValidations] = useState({
     hasUpperCase: false,
     hasLowerCase: false,
@@ -37,7 +39,15 @@ export default function Register() {
     try {
       console.log("form");
       const res = await axios.post('https://localhost/api/register', form);
-      alert(`Zarejestrowano: ${JSON.stringify(res.data)}`);
+      console.log("data: " + res.data.qrUrl);
+      if (res.data.qrUrl) {
+        navigate('/twofa', { 
+          state: { qrUrl: res.data.qrUrl },
+          replace: true 
+        });
+      } else {
+        console.error("No QR URL in response");
+      }
     } catch (error) {
       console.error(error.res);
       alert(error.response.data);
