@@ -13,6 +13,9 @@ import multer from 'multer';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 import crypto from 'crypto';
+import { JSDOM } from 'jsdom';
+import createDOMPurify from 'dompurify';
+import { ClientRequest } from 'http';
 
 
 const app = express();
@@ -66,7 +69,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
-  await db.exec(`DROP TABLE IF EXISTS users`);
+  //await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -347,31 +350,40 @@ app.post('/api/newpost', upload.single('image'), async (req, res) => {
       return res.status(401).send('Unauthorized');
     }
 
+    const window = new JSDOM('').window;
+    const DOMPurify = createDOMPurify(window);
+
+    const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%&*+=<>/]{1,1000}$/u;
+    const cleanBody = DOMPurify.sanitize(body, {
+      ALLOWED_TAGS: ['b', 'i', 'u'],
+      ALLOWED_ATTR: []
+    });
+    const cleanMood = DOMPurify.sanitize(mood, {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: []
+    });
+    console.log(DOMPurify.sanitize(cleanBody));
+    if (!allowedChars.test(cleanBody) || !allowedChars.test(cleanMood)) {
+      console.log('Invalid characters in post content or mood.');d
+      return res.status(400).send('Invalid characters in post content or mood.');
+    }
+
 
     const user = await db.get('SELECT private_key FROM users WHERE id = ?', userId);
     const image = req.file ? `/uploads/${req.file.filename}` : null; // Save the image path if an image is uploaded
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(createSignatureMessage({
-      body, mood, emoji, userId
+      cleanBody, cleanMood, emoji, userId
     }));
     const signature = sign.sign(user.private_key, 'base64');
-    
-    console.log('User ID:', userId);
-    console.log('Request Body:', req.body);
-    console.log('Uploaded File:', req.file);
-    console.log('Image Path:', image); // Log the image path
-    console.log('priv_key:', user.private_key);
+
 
 
     //todo przywroc dopuszczalne znaki
     // Validate allowed characters (including Unicode letters and numbers)
-    // const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%^&*+=<>]+$/u;
-    // if (!allowedChars.test(body) || !allowedChars.test(mood)) {
-    //   console.log('Invalid characters in post content or mood.');d
-    //   return res.status(400).send('Invalid characters in post content or mood.');
-    // }
 
-    await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (?, ?, ?, ?, ?, ?)`, [userId, body, mood, emoji, image, signature]);
+
+    await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (?, ?, ?, ?, ?, ?)`, [userId, cleanBody, cleanMood, emoji, image, signature]);
     res.status(200).send('Post created successfully');
     //TODO: Fix inage not being added to the post
   } catch (error) {
