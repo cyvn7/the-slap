@@ -17,6 +17,7 @@
     "cors": "^2.8.5",
     "dompurify": "^3.2.3",
     "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
     "express-session": "^1.18.1",
     "express-useragent": "^1.0.15",
     "hi-base32": "^0.5.1",

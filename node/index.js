@@ -16,13 +16,25 @@ import crypto from 'crypto';
 import { JSDOM } from 'jsdom';
 import createDOMPurify from 'dompurify';
 import { ClientRequest } from 'http';
-
+import rateLimit from 'express-rate-limit';
 
 const app = express();
 const SQLiteStoreSession = SQLiteStore(session);
 const upload = multer({
   dest: 'uploads/',
   limits: { fileSize: 10 * 1024 * 1024 } // Set file size limit to 10MB
+});
+const limiterOneSec = rateLimit({
+  windowMs: 1000,
+  max: 1,
+});
+const limiterHalfSec = rateLimit({
+  windowMs: 500 ,
+  max: 1
+});
+const limiterThreeSecs = rateLimit({
+  windowMs: 3000,
+  max: 1
 });
 
 // Dodaj przed innymi middleware
@@ -139,7 +151,7 @@ app.get('/api/all', async (req, res) => {
 });
 
 // POST method to insert a user
-app.post('/api/register', async (req, res) => {
+app.post('/api/register', limiterThreeSecs, async (req, res) => {
   console.log("hello");
   try {
     const { name, email, password } = req.body;
@@ -243,7 +255,7 @@ const checkLoginAttempts = async (email) => {
 
 
 // POST method to login a user
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', limiterOneSec, async (req, res) => {
   try {
     const db = await dbPromise;
     const ip = req.ip;
@@ -339,8 +351,10 @@ const createSignatureMessage = (data) => JSON.stringify({
   userId: data.userId
 }, Object.keys({}).sort());
 
+
+
 // POST method to add a new post
-app.post('/api/newpost', upload.single('image'), async (req, res) => {
+app.post('/api/newpost', limiterOneSec, upload.single('image'), async (req, res) => {
   try {
     const db = await dbPromise;
     const { body, mood, emoji } = req.body;
@@ -349,6 +363,9 @@ app.post('/api/newpost', upload.single('image'), async (req, res) => {
     if (!userId) {
       return res.status(401).send('Unauthorized');
     }
+    if (body.length > 1000 || mood.length > 100 || emoji.length > 10) {
+      return res.status(400).send('Content too long');
+    }
 
     const window = new JSDOM('').window;
     const DOMPurify = createDOMPurify(window);
@@ -356,12 +373,11 @@ app.post('/api/newpost', upload.single('image'), async (req, res) => {
     const allowedChars = /^[\p{L}\p{N}\s.,!?'"()\-:;@#$%&*+=<>/]{1,1000}$/u;
     const cleanBody = DOMPurify.sanitize(body, {
       ALLOWED_TAGS: ['b', 'i', 'u'],
-      ALLOWED_ATTR: []
+      ALLOWED_ATTR: [],
+      FORBID_TAGS: ['script', 'style', 'iframe', 'form', 'input'],
+      FORBID_ATTR: ['onload', 'onclick', 'onmouseover']
     });
-    const cleanMood = DOMPurify.sanitize(mood, {
-      ALLOWED_TAGS: [],
-      ALLOWED_ATTR: []
-    });
+    const cleanMood = DOMPurify.sanitize(mood);
     console.log(DOMPurify.sanitize(cleanBody));
     if (!allowedChars.test(cleanBody) || !allowedChars.test(cleanMood)) {
       console.log('Invalid characters in post content or mood.');d
@@ -379,8 +395,6 @@ app.post('/api/newpost', upload.single('image'), async (req, res) => {
 
 
 
-    //todo przywroc dopuszczalne znaki
-    // Validate allowed characters (including Unicode letters and numbers)
 
 
     await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (?, ?, ?, ?, ?, ?)`, [userId, cleanBody, cleanMood, emoji, image, signature]);
@@ -409,7 +423,7 @@ app.get('/api/session', (req, res) => {
   }
 });
 
-app.delete('/api/user/:id', async (req, res) => {
+app.delete('/api/user/:id', limiterThreeSecs, async (req, res) => {
   try {
     const { id } = req.params;
     const db = await dbPromise;
@@ -463,7 +477,7 @@ app.delete('/api/user/:id', async (req, res) => {
   }
 });
 
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', limiterOneSec, (req, res) => {
   req.session.destroy(err => {
     if (err) {
       return res.status(500).send('Error logging out');
@@ -593,7 +607,7 @@ app.post('/verify-2fa', async (req, res) => {
   }
 });
 
-app.post('/api/reset-password', async (req, res) => {
+app.post('/api/reset-password', limiterOneSec, async (req, res) => {
   try {
     const { oldPassword, newPassword, twoFactorCode } = req.body;
     const userId = req.session.userId;
