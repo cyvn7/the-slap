@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, Link } from "react-router-dom";
-import axios from 'axios';
-import logo from '../assets/logo.png'; // Ścieżka do logo
+import logo from '../assets/logo.png';
 import apiClient from '../auth.js';
 
 const Layout = () => {
@@ -27,10 +26,10 @@ const Layout = () => {
         </Link>
         {session.loggedIn ? (
           <div>
-            <span>Witaj, {session.userName}</span>
+            <span>Hello, {session.userName}</span>
           </div>
         ) : (
-          <span>Nie jesteś zalogowany</span>
+          <span>You are not logged in</span>
         )}
       </header>
       <nav>

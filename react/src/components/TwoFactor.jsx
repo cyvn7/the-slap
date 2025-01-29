@@ -8,7 +8,6 @@ const TwoFactor = () => {
     const [isLoading, setIsLoading] = useState(true);
     
     useEffect(() => {
-        // Check if user came from registration
         if (!location.state?.qrUrl || !location.state?.fromRegistration) {
             navigate('/');
             return;

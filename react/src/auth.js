@@ -10,7 +10,6 @@ const apiClient = axios.create({
   }
 });
 
-// Request interceptor
 apiClient.interceptors.request.use((config) => {
   console.log('Request:', {
     url: config.url,
@@ -21,7 +20,6 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor
 apiClient.interceptors.response.use(
   (response) => {
     console.log('Response:', response);

@@ -60,7 +60,7 @@ export default function Register() {
       <h1>Rejestracja</h1>
       <input
         type="text"
-        placeholder="Nazwa użytkownika"
+        placeholder="Username"
         value={form.name}
         onChange={(e) => setForm({ ...form, name: e.target.value })}
         className="input"
@@ -74,7 +74,7 @@ export default function Register() {
       />
       <input
         type="password"
-        placeholder="Hasło"
+        placeholder="Password"
         value={form.password}
         onChange={(e) => {
           setForm({ ...form, password: e.target.value });
@@ -84,19 +84,19 @@ export default function Register() {
       />
       <input
         type="password"
-        placeholder="Potwierdź hasło"
+        placeholder="Repeat Password"
         value={form.confirmPassword}
         onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
         className="input"
       />
       <div className="validation">
-        <p style={{ color: passwordValidations.hasUpperCase ? 'green' : 'gray' }}>Duża litera</p>
-        <p style={{ color: passwordValidations.hasLowerCase ? 'green' : 'gray' }}>Mała litera</p>
-        <p style={{ color: passwordValidations.hasNumber ? 'green' : 'gray' }}>Cyfra</p>
-        <p style={{ color: passwordValidations.hasSpecialChar ? 'green' : 'gray' }}>Znak specjalny</p>
-        <p style={{ color: passwordValidations.hasMinLength ? 'green' : 'gray' }}>Minimum 8 znaków</p>
+        <p style={{ color: passwordValidations.hasUpperCase ? 'green' : 'gray' }}>At least one big letter</p>
+        <p style={{ color: passwordValidations.hasLowerCase ? 'green' : 'gray' }}>At least one small letter</p>
+        <p style={{ color: passwordValidations.hasNumber ? 'green' : 'gray' }}>At least one number</p>
+        <p style={{ color: passwordValidations.hasSpecialChar ? 'green' : 'gray' }}>At least one special character</p>
+        <p style={{ color: passwordValidations.hasMinLength ? 'green' : 'gray' }}>At least 8 characters</p>
       </div>
-      <button type="submit" disabled={!Object.values(passwordValidations).every(Boolean)} className="button">Zarejestruj</button>
+      <button type="submit" disabled={!Object.values(passwordValidations).every(Boolean)} className="button">Register</button>
     </form>
   );
 }

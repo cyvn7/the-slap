@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
 import DOMPurify from 'dompurify';
 import './styles/Home.css';
 import apiClient from '../auth.js';
@@ -38,7 +37,7 @@ const Home = () => {
 
   const handleDelete = async (postId) => {
     try {
-      const response = await axios.delete(`https://localhost/api/posts/${postId}`, { withCredentials: true });
+      const response = await apiClient.delete(`/api/posts/${postId}`);
       if (response.status === 200) {
         setPosts(posts.filter(post => post.id !== postId));
       }

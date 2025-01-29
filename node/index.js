@@ -7,7 +7,6 @@ import bcrypt from 'bcryptjs';
 import session from 'express-session';
 import SQLiteStore from 'connect-sqlite3';
 import * as OTPAuth from "otpauth";
-import * as base32 from "hi-base32";
 import QRCode from "qrcode";
 import multer from 'multer';
 import { fileURLToPath } from 'url';
@@ -15,15 +14,14 @@ import cors from 'cors';
 import crypto from 'crypto';
 import { JSDOM } from 'jsdom';
 import createDOMPurify from 'dompurify';
-import { ClientRequest } from 'http';
 import rateLimit from 'express-rate-limit';
 import sqlSanitizer from 'sql-sanitizer';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Remove hardcoded API_KEY
 const API_KEY = process.env.API_KEY;
 const APP_USER_AGENT = 'TheSlap/1.0';
+const SECRET = process.env.SECRET;
 
 export const apiAuth = (req, res, next) => {
   const apiKey = req.headers['x-api-key'];
@@ -46,24 +44,21 @@ const app = express();
 app.use('/api', apiAuth);
 app.use(sqlSanitizer);
 const SQLiteStoreSession = SQLiteStore(session);
+
 const upload = multer({
   dest: 'uploads/',
-  limits: { fileSize: 10 * 1024 * 1024 } // Set file size limit to 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }
 });
 const limiterOneSec = rateLimit({
   windowMs: 1000,
   max: 1,
-});
-const limiterHalfSec = rateLimit({
-  windowMs: 500 ,
-  max: 1
 });
 const limiterThreeSecs = rateLimit({
   windowMs: 3000,
   max: 1
 });
 
-// Dodaj przed innymi middleware
+
 app.use(cors({
   origin: 'https://localhost',
   methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
@@ -72,7 +67,7 @@ app.use(cors({
   exposedHeaders: ['x-api-key']
 }));
 
-// Get the directory name
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -80,27 +75,26 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Configure session middleware
+
 app.use(session({
   store: new SQLiteStoreSession({ db: 'sessions.sqlite', dir: './db' }),
-  secret: '03fd1b2909430fb9b4f3f4386b33849a7883c6dbc53d99be03ead108d483c7ab7f3f17904b02699915f7ffa3e63bd8603bd624f12f8d05cffc4ad32da8444720', // Use a strong secret key and store it securely
+  secret: SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    // secure: true, // Ensure cookies are only sent over HTTPS
-    httpOnly: true, // Prevent client-side scripts from accessing the cookies
-    maxAge: 3600000, // Set a reasonable expiration time for sessions
-    sameSite: 'strict' // Prevent CSRF attacks
+    httpOnly: true,
+    maxAge: 3600000,
+    sameSite: 'strict'
   }
 }));
 
-// Ensure the db directory exists
+
 const dbDir = path.resolve('./db');
 if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true });
 }
 
-// Open SQLite database 
+
 const dbPromise = open({
   filename: path.join(dbDir, 'theslap.sqlite'),
   driver: sqlite3.Database
@@ -109,7 +103,7 @@ const dbPromise = open({
 const createTable = async () => {
   const db = await dbPromise;
   console.log(crypto.randomBytes(32).toString('hex'));
-  //await db.exec(`DROP TABLE IF EXISTS users`);
+  //await db.exec(`DROP TABLE IF EXISTS users`);  //Testowe
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -145,55 +139,38 @@ const createTable = async () => {
     FOREIGN KEY (user_id) REFERENCES users(id)
   )`);
 
-  // Print out the contents of the users table
-  const users = await db.all(`SELECT * FROM users`);
-  console.log('Users table:', users);
+  //Testowe:
 
-  // Print out the contents of the posts table
-  const posts = await db.all(`SELECT * FROM posts`);
-  console.log('Posts table:', posts);
+  // const users = await db.all(`SELECT * FROM users`);
+  // console.log('Users table:', users);
 
-  // Print out the contents of the logins table
-  const logins = await db.all(`SELECT * FROM logins`);
-  console.log('Logins table:', logins);
-  console.log("hello");
+
+  // const posts = await db.all(`SELECT * FROM posts`);
+  // console.log('Posts table:', posts);
+
+
+  // const logins = await db.all(`SELECT * FROM logins`);
+  // console.log('Logins table:', logins);
 };
 
 createTable();
 
-// Endpoint for the root path
-app.get('/', (req, res) => res.send('Welcome to the API'));
 
-app.get('/api', (req, res) => res.send('Hello World!'));
-
-// GET method to get all users
-app.get('/api/all', async (req, res) => {
-  try {
-    const db = await dbPromise;
-    const users = await db.all(`SELECT * FROM users`);
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).send('Error');
-    console.log(error);
-  }
-});
-
-// POST method to insert a user
 app.post('/api/register', limiterThreeSecs, async (req, res) => {
   console.log("hello");
   try {
     const { name, email, password } = req.body;
-    const salt = await bcrypt.genSalt(10); // Generate salt with 10 rounds
-    const hashedPassword = await bcrypt.hash(password, salt); // Hash the password with the salt
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt); 
 
-    // Generate 2FA secret
+
     const secret = new OTPAuth.Secret();
     const secretBase32 = secret.base32;
     
-    // Create TOTP instance for QR code
+
     const totp = new OTPAuth.TOTP({
       issuer: "the-slap.com",
-      label: email, // Use email as label for better identification
+      label: email,
       algorithm: "SHA1",
       digits: 6,
       period: 30,
@@ -212,18 +189,15 @@ app.post('/api/register', limiterThreeSecs, async (req, res) => {
       }
     });
 
-    // Generate QR code URL
     const otpauth_url = totp.toString();
     console.log('Registration secret:', secretBase32);
 
-    // Generate and send the QR code as a responsedd
     QRCode.toDataURL(otpauth_url, (err) => {
       console.log(otpauth_url)
       })
 
     const db = await dbPromise;
     await db.run(`INSERT INTO users (name, email, password, secret, public_key, private_key) VALUES (?, ?, ?, ?, ?, ?)`, [name, email, hashedPassword, secretBase32, publicKey, privateKey]);
-    // res.status(200).send(req.body);
     res.status(200).json({
       user: { name, email },
       qrUrl: otpauth_url
@@ -252,14 +226,14 @@ const checkLoginAttempts = async (email) => {
     WHERE email = ?
   `, email);
 
-  if (!user) return true; // Allow login attempt if user doesn't exist
+  if (!user) return true;
 
   const now = new Date();
-  const lockoutDuration = 15 * 60 * 1000; // 15 minutes
+  const lockoutDuration = 15 * 60 * 1000;
   const maxAttempts1 = 5;
   const maxAttempts2 = 8;
   const maxAttempts3 = 10;
-//napraw to. powinno wykrywac okienka 0-5, 5-8, 8-10, 10+
+
   if (user.failed_attempts >= maxAttempts3) {
     return 'Account is permanently locked due to too many failed login attempts.';
   }
@@ -320,9 +294,8 @@ app.post('/api/login', limiterOneSec, async (req, res) => {
       return res.status(401).send('Invalid email or password');
     }
 
-    console.log('Stored secret:', user.secret); // Log stored secret
+    console.log('Stored secret:', user.secret);
 
-    // Create TOTP instance for validation
     const totp = new OTPAuth.TOTP({
       issuer: "the-slap.com",
       label: email,
@@ -333,13 +306,12 @@ app.post('/api/login', limiterOneSec, async (req, res) => {
     });
 
 
-    // Validate token with window of 1 to allow for time drift
     const delta = totp.validate({
       token,
       window: 1
     });
 
-    console.log('Token validation result:', delta); // Log validation result
+    console.log('Token validation result:', delta);
 
     if (delta === null) {
       await logLoginAttempt(false);
@@ -363,7 +335,7 @@ app.post('/api/login', limiterOneSec, async (req, res) => {
     await logLoginAttempt(true);
     req.session.userId = user.id;
     req.session.userName = user.name;
-    req.session.userIp = req.ip; // Store the user's IP address in the session
+    req.session.userIp = req.ip;
     req.session.userAgent = req.headers['user-agent'];
     res.status(200).send('Login successful');
   } catch (error) {
@@ -381,7 +353,7 @@ const createSignatureMessage = (data) => JSON.stringify({
 
 
 
-// POST method to add a new post
+
 app.post('/api/newpost', limiterOneSec, upload.single('image'), async (req, res) => {
   try {
     const db = await dbPromise;
@@ -414,7 +386,7 @@ app.post('/api/newpost', limiterOneSec, upload.single('image'), async (req, res)
 
 
     const user = await db.get('SELECT private_key FROM users WHERE id = ?', userId);
-    const image = req.file ? `/uploads/${req.file.filename}` : null; // Save the image path if an image is uploaded
+    const image = req.file ? `/uploads/${req.file.filename}` : null;
     const sign = crypto.createSign('RSA-SHA256');
     sign.update(createSignatureMessage({
       cleanBody, cleanMood, emoji, userId
@@ -429,21 +401,20 @@ app.post('/api/newpost', limiterOneSec, upload.single('image'), async (req, res)
     const query = `INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (${userId}, '${cleanBody}', '${cleanMood}', '${emoji}', '${image}', '${signature}')`;
     console.log(query);
     res.status(200).send('Post created successfully');
-    //TODO: Fix inage not being added to the post
   } catch (error) {
     res.status(500).send('Error');
     console.log(error);
   }
 });
 
-// GET method to check session
+
 app.get('/api/session', (req, res) => {
   if (req.session.userId) {
     res.json({
       loggedIn: true,
       userName: req.session.userName,
       userId: req.session.userId,
-      userIp: req.session.userIp,  // Include the user's IP address in the response
+      userIp: req.session.userIp,  
       userAgent: req.session.userAgent 
     });
   } else {
@@ -458,13 +429,13 @@ app.delete('/api/user/:id', limiterThreeSecs, async (req, res) => {
     const { id } = req.params;
     const db = await dbPromise;
 
-    // Get all user's posts with images
+
     const userPosts = await db.all(
       `SELECT image FROM posts WHERE postedid = ?`, 
       id
     );
 
-    // Delete associated image files
+
     for (const post of userPosts) {
       if (post.image) {
         const imagePath = path.join(__dirname, post.image);
@@ -477,13 +448,11 @@ app.delete('/api/user/:id', limiterThreeSecs, async (req, res) => {
       }
     }
 
-    // Delete all user's posts
     await db.run(
       `DELETE FROM posts WHERE postedid = ?`, 
       id
     );
 
-    // Delete user
     await db.run(
       `DELETE FROM users WHERE id = ?`, 
       id
@@ -518,7 +487,6 @@ app.post('/api/logout', limiterOneSec, (req, res) => {
 
 
 
-// GET method to get all posts
 app.get('/api/posts', async (req, res) => {
   try {
     const db = await dbPromise;
@@ -556,7 +524,6 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
-// DELETE method to delete a post
 app.delete('/api/posts/:id', async (req, res) => {
   try {
     const postId = req.params.id;
@@ -577,7 +544,6 @@ app.delete('/api/posts/:id', async (req, res) => {
       return res.status(403).send('Forbidden');
     }
 
-    // Delete the image file if it exists
     if (post.image) {
       const imagePath = path.join(__dirname, post.image);
       fs.unlink(imagePath, (err) => {
@@ -597,12 +563,10 @@ app.delete('/api/posts/:id', async (req, res) => {
   }
 });
 
-// Endpoint to verify the two-way authentication code
 app.post('/verify-2fa', async (req, res) => {
   try {
     const { username, token } = req.body;
     const db = await dbPromise;
-    // Find user by name in DB
     const user = await db.get(`SELECT id, secret FROM users WHERE name = ?`, username);
     if (!user) {
       return res.status(404).send('User not found');
@@ -654,7 +618,6 @@ app.post('/api/reset-password', limiterOneSec, async (req, res) => {
       return res.status(400).send('Invalid old password');
     }
 
-    // Verify the 2FA token
     const totp = new OTPAuth.TOTP({
       issuer: "the-slap.com",
       label: "The Slap",
@@ -726,9 +689,10 @@ app.get('/api/login-history', async (req, res) => {
         logins.success,
         logins.attempt_time
       FROM logins
+      WHERE logins.user_id = ?
       ORDER BY attempt_time DESC
       LIMIT 100
-    `);
+    `, req.session.userId);
 
     res.json(loginHistory);
   } catch (error) {

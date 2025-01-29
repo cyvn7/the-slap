@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { Link } from 'react-router-dom';
 import apiClient from '../auth.js';
 
@@ -64,7 +63,7 @@ const Login = () => {
           />
         </div>
         <button type="submit">Login</button>
-        <Link to="/register">Nie masz konta? Zarejestruj się!</Link>
+        <Link to="/register">No account? Register!</Link>
       </form>
     </div>
   );

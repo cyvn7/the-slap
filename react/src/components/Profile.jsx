@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
-import axios from 'axios';
 import apiClient from '../auth.js';
 
 const Profile = () => {
@@ -54,7 +53,7 @@ const Profile = () => {
   }
 
   if (!session.loggedIn) {
-    return <p>Nie jesteś zalogowany</p>;
+    return <p>You are not signed in</p>;
   }
 
   return (

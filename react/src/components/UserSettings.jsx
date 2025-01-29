@@ -55,14 +55,14 @@ const UserSettings = () => {
 
 
   if (!session.loggedIn) {
-    return <p>Nie jesteś zalogowany</p>;
+    return <p>You are not logged in</p>;
   }
 
   return (
     <div className="profile-container">
-      <button onClick={handleLogout}>Wyloguj się</button>       
-      <button onClick={() => window.location.href = '/reset'}>Zmień hasło</button>
-      <button onClick={handleAccountDeletion}>Usuń konto</button>
+      <button onClick={handleLogout}>Sign out</button>       
+      <button onClick={() => window.location.href = '/reset'}>Change password</button>
+      <button onClick={handleAccountDeletion}>Delete your account</button>
       <h1>Settings</h1>
       <h2>Logged in as:</h2>
       <p>Name: {session.userName}</p>

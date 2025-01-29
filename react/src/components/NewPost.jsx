@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import axios from 'axios';
 import './styles/NewPost.css';
 import apiClient from '../auth.js';
 

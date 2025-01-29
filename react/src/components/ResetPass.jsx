@@ -61,29 +61,28 @@ export default function ResetPass() {
     const onSubmit = async (e) => {
         e.preventDefault();
         if (form.newPassword !== form.confirmNewPassword) {
-            alert('Nowe hasła nie są zgodne');
+            alert('Passwords do not match');
             console.log('old: ', form.oldPassword, 'new: ', form.newPassword, 'confirm: ', form.confirmNewPassword);
             return;
         }
         if (!validatePassword(form.newPassword)) {
-            alert('Nowe hasło nie spełnia wymagań');
+            alert('New password does not meet expectaions');
             return;
         }
         try {
             const res = await axios.post('http://localhost:8000/api/reset-password', form, { withCredentials: true });
-            alert(`Hasło zostało zmienione: ${JSON.stringify(res.data)}`);
+            alert(`Password changed`);
         } catch (error) {
-            console.error('Error resetting password:', error);
-            alert('Błąd podczas zmiany hasła');
+            alert('Error while resetting password: ' + error.response.data);
         }
     };
 
     if (isLoggedIn === null) {
-        return <div>Loading...</div>; // Render loading state while checking session
+        return <div>Loading...</div>;
     }
 
     if (!isLoggedIn) {
-        return <div>Unauthorized</div>; // Render loading state while checking session
+        return <div>Unauthorized</div>;
     }
 
     return (
@@ -136,13 +135,13 @@ export default function ResetPass() {
                     />
                 </div>
                 <div className="validation">
-                    <p style={{ color: passwordValidations.hasUpperCase ? 'green' : 'gray' }}>Duża litera</p>
-                    <p style={{ color: passwordValidations.hasLowerCase ? 'green' : 'gray' }}>Mała litera</p>
-                    <p style={{ color: passwordValidations.hasNumber ? 'green' : 'gray' }}>Cyfra</p>
-                    <p style={{ color: passwordValidations.hasSpecialChar ? 'green' : 'gray' }}>Znak specjalny</p>
-                    <p style={{ color: passwordValidations.hasMinLength ? 'green' : 'gray' }}>Minimum 8 znaków</p>
+                    <p style={{ color: passwordValidations.hasUpperCase ? 'green' : 'gray' }}>At least one big letter</p>
+                    <p style={{ color: passwordValidations.hasLowerCase ? 'green' : 'gray' }}>At least one small letter</p>
+                    <p style={{ color: passwordValidations.hasNumber ? 'green' : 'gray' }}>At least one number</p>
+                    <p style={{ color: passwordValidations.hasSpecialChar ? 'green' : 'gray' }}>At least one special character</p>
+                    <p style={{ color: passwordValidations.hasMinLength ? 'green' : 'gray' }}>At least 8 characters</p>
                 </div>
-                <button type="submit" disabled={!Object.values(passwordValidations).every(Boolean)} className="button">Zarejestruj</button>
+                <button type="submit" disabled={!Object.values(passwordValidations).every(Boolean)} className="button">Change password</button>
             </form>
         </div>
     );
