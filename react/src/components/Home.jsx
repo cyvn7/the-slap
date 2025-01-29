@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import DOMPurify from 'dompurify';
 import './styles/Home.css';
+import apiClient from '../auth.js';
 
 const Home = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -11,7 +12,8 @@ const Home = () => {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await axios.get('https://localhost/api/session', { withCredentials: true });
+        const response = await apiClient.get('/api/session');
+        console.log("odp: " + response.data);
         setIsLoggedIn(response.data.loggedIn);
         setUserName(response.data.userName);
         if (response.data.loggedIn) {
@@ -24,7 +26,7 @@ const Home = () => {
 
     const fetchPosts = async () => {
       try {
-        const response = await axios.get('https://localhost/api/posts', { withCredentials: true });
+        const response = await apiClient.get('/api/posts');
         setPosts(response.data);
       } catch (error) {
         console.error('Error fetching posts:', error);

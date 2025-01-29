@@ -3,6 +3,7 @@ import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import axios from 'axios';
 import './styles/NewPost.css';
+import apiClient from '../auth.js';
 
 const NewPost = () => {
   const [content, setContent] = useState('');
@@ -17,7 +18,7 @@ const NewPost = () => {
   useEffect(() => {
     const fetchSession = async () => {
       try {
-        const response = await axios.get('https://localhost/api/session', { withCredentials: true });
+        const response = await apiClient.get('/api/session');
         if (response.data.loggedIn) {
           setUserName(response.data.userName);
         }
@@ -80,9 +81,12 @@ const NewPost = () => {
     }
 
     try {
-      const response = await axios.post('https://localhost/api/newpost', formData, {
+      const response = await apiClient.post('/api/newpost', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+    'x-api-key': "fc2ee9a33a0b19c9cb7316e22ba05b4fb2d72b5311075caa56a76d4a0915f5e6",
+    'User-Agent': 'TheSlap/1.0',
+    'Content-Type': 'application/json'
         },
         withCredentials: true
       });

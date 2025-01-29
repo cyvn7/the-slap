@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import '../index.css'; // Import stylów CSS
+import apiClient from '../auth.js';
 
 export default function ResetPass() {
     const [form, setForm] = useState({ oldPassword: '', newPassword: '', confirmNewPassword: '', token: '' });
@@ -38,7 +39,7 @@ export default function ResetPass() {
 
     useEffect(() => {
         const fetchSession = async () => {
-            const response = await axios.get('http://localhost:8000/api/session', { withCredentials: true });
+            const response = await apiClient.get('/api/session');
             setIsLoggedIn(response.data.loggedIn);
         };
 

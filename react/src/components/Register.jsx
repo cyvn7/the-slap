@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import '../index.css'; // Import stylów CSS
+import apiClient from '../auth.js';
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: ''});
@@ -38,7 +39,7 @@ export default function Register() {
     }
     try {
       console.log("form");
-      const res = await axios.post('https://localhost/api/register', form);
+      const res = await apiClient.post('/api/register', form);
       console.log("data: " + res.data.qrUrl);
       if (res.data.qrUrl) {
         navigate('/twofa', { 

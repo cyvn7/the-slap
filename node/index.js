@@ -18,8 +18,32 @@ import createDOMPurify from 'dompurify';
 import { ClientRequest } from 'http';
 import rateLimit from 'express-rate-limit';
 import sqlSanitizer from 'sql-sanitizer';
+import dotenv from 'dotenv';
+dotenv.config();
+
+// Remove hardcoded API_KEY
+const API_KEY = process.env.API_KEY;
+const APP_USER_AGENT = 'TheSlap/1.0';
+
+export const apiAuth = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  const userAgent = req.headers['user-agent'];
+
+  if (!apiKey || apiKey !== API_KEY) {
+    return res.status(403).json({ error: 'Access denied ' });
+  }
+
+
+  if (!userAgent || !userAgent.includes(APP_USER_AGENT)) {
+    return res.status(403).json({ error: 'Invalid user agent' });
+  }
+
+  next();
+};
+
 
 const app = express();
+app.use('/api', apiAuth);
 app.use(sqlSanitizer);
 const SQLiteStoreSession = SQLiteStore(session);
 const upload = multer({
@@ -44,7 +68,8 @@ app.use(cors({
   origin: 'https://localhost',
   methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
   credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'User-Agent'],
+  exposedHeaders: ['x-api-key']
 }));
 
 // Get the directory name
@@ -83,6 +108,7 @@ const dbPromise = open({
 
 const createTable = async () => {
   const db = await dbPromise;
+  console.log(crypto.randomBytes(32).toString('hex'));
   //await db.exec(`DROP TABLE IF EXISTS users`);
   await db.exec(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

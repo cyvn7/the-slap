@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, Link } from "react-router-dom";
 import axios from 'axios';
 import logo from '../assets/logo.png'; // Ścieżka do logo
+import apiClient from '../auth.js';
 
 const Layout = () => {
   const [session, setSession] = useState({ loggedIn: false, userName: '' });
 
   useEffect(() => {
     const fetchSession = async () => {
-      const response = await axios.get('https://localhost/api/session', { withCredentials: true });
+      const response = await apiClient.get('/api/session');
       setSession(response.data);
     };
 

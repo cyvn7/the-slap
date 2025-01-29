@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import apiClient from '../auth.js';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -10,13 +11,21 @@ const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('https://localhost/api/login', { email, password, token }, { withCredentials: true });
+      const res = await apiClient.post('/api/login', {
+        email,
+        password,
+        token
+      });
       if (res.status === 200) {
         window.location.href = '/';
       }
     } catch (error) {
-      alert('Error ' + error.response.status + ': ' + error.response.data);
-      console.error("error " + error);
+      const errorMessage = error.response?.data || error.message || 'Unknown error occurred';
+      const statusCode = error.response?.status || 'Unknown';
+      alert(`Error ${statusCode}: ${errorMessage}`);
+      console.error('Login error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 

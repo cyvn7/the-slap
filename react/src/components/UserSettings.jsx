@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import apiClient from '../auth.js';
 
 const UserSettings = () => {
   const [session, setSession] = useState({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
@@ -12,7 +13,7 @@ const UserSettings = () => {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get('https://localhost/api/session', { withCredentials: true });
+        const response = await apiClient.get('/api/session');
         
         if (!response.data.loggedIn) {
           navigate('/login');
@@ -20,7 +21,7 @@ const UserSettings = () => {
         }
 
         setSession(response.data);
-        const historyResponse = await axios.get('https://localhost/api/login-history', { withCredentials: true });
+        const historyResponse = await apiClient.get('/api/login-history');
         setLoginHistory(historyResponse.data);
       } catch (error) {
         console.error('Auth check failed:', error);
@@ -34,7 +35,7 @@ const UserSettings = () => {
   }, [navigate]);
 
   const handleLogout = async () => {
-    await axios.post('https://localhost/api/logout', {}, { withCredentials: true });
+    await apiClient.post('/api/logout');
     setSession({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
     window.location.href = '/login';
   };
@@ -42,7 +43,7 @@ const UserSettings = () => {
   const handleAccountDeletion = async () => {
     if (window.confirm('Are you sure you want to delete your account?')) {
       const userId = session.userId;
-      await axios.delete(`https://localhost/api/user/${userId}`, { withCredentials: true });
+      await apiClient.delete(`/api/user/${userId}`);
       setSession({ loggedIn: false, userName: '', userIp: '', userAgent: '' });
       window.location.href = '/login';
     }
