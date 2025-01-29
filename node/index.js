@@ -17,8 +17,10 @@ import { JSDOM } from 'jsdom';
 import createDOMPurify from 'dompurify';
 import { ClientRequest } from 'http';
 import rateLimit from 'express-rate-limit';
+import sqlSanitizer from 'sql-sanitizer';
 
 const app = express();
+app.use(sqlSanitizer);
 const SQLiteStoreSession = SQLiteStore(session);
 const upload = multer({
   dest: 'uploads/',
@@ -398,6 +400,8 @@ app.post('/api/newpost', limiterOneSec, upload.single('image'), async (req, res)
 
 
     await db.run(`INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (?, ?, ?, ?, ?, ?)`, [userId, cleanBody, cleanMood, emoji, image, signature]);
+    const query = `INSERT INTO posts (postedid, body, mood, emoji, image, signature) VALUES (${userId}, '${cleanBody}', '${cleanMood}', '${emoji}', '${image}', '${signature}')`;
+    console.log(query);
     res.status(200).send('Post created successfully');
     //TODO: Fix inage not being added to the post
   } catch (error) {

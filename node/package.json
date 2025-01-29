@@ -27,6 +27,7 @@
     "otpauth": "^9.3.6",
     "qrcode": "^1.5.4",
     "react-router-dom": "^7.1.1",
+    "sql-sanitizer": "^1.0.0",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },
